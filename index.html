@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NAVIGATR</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: url('https://t3.ftcdn.net/jpg/05/99/72/06/360_F_599720625_N2U8AQzhS5y7llrp2AMAQmKL4B6nWHKT.jpg') no-repeat center/cover;
+            background-attachment: fixed;
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .card {
+            max-width: 550px;
+            margin: 50px auto;
+            padding: 35px;
+            background: rgba(0, 0, 0, 0.88);
+            border-radius: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            color: white;
+            backdrop-filter: blur(2px);
+        }
+        .card input, .card button {
+            width: 100%;
+            padding: 12px;
+            margin: 12px 0;
+            border-radius: 10px;
+            border: none;
+            font-size: 15px;
+        }
+        .card button {
+            background: #e94560;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .card button:hover {
+            background: #c73e55;
+            transform: scale(1.02);
+        }
+        
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 15px;
+            margin: 25px 0;
+        }
+        
+        .game-card {
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: white;
+            padding: 60px 10px 15px 10px;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.3s;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            min-height: 120px;
+            position: relative;
+        }
+        .game-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.45);
+            border-radius: 12px;
+            z-index: 1;
+        }
+        .game-card span, .game-card div {
+            position: relative;
+            z-index: 2;
+        }
+        .game-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .recommend-card {
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: white;
+            padding: 50px 10px 12px 10px;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.3s;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            min-height: 130px;
+            position: relative;
+        }
+        .recommend-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.45);
+            border-radius: 12px;
+            z-index: 1;
+        }
+        .recommend-card span {
+            position: relative;
+            z-index: 2;
+        }
+        .recommend-card:hover {
+            transform: translateY(-3px);
+        }
+        
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #333;
+        }
+        .total {
+            font-size: 22px;
+            font-weight: bold;
+            text-align: right;
+            padding: 15px;
+            border-top: 2px solid #e94560;
+            margin-top: 15px;
+        }
+        
+        .remove-btn {
+            background: #e94560;
+            border: none;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            width: auto;
+            min-width: 28px;
+            transition: 0.3s;
+        }
+        .remove-btn:hover {
+            background: #c73e55;
+            transform: scale(1.05);
+        }
+        
+        .payment-option {
+            background: #1a1a2e;
+            padding: 15px;
+            border-radius: 12px;
+            margin: 12px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        .payment-option:hover {
+            background: #e94560;
+            transform: translateX(5px);
+        }
+        .payment-option.selected {
+            background: #00a86b;
+            border: 2px solid white;
+        }
+        .payment-option h3 {
+            margin-bottom: 5px;
+        }
+        .payment-option p {
+            font-size: 12px;
+            color: #ccc;
+        }
+        
+        .qr-code {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+        .qr-code img {
+            width: 180px;
+            height: 180px;
+        }
+        .bank-details {
+            background: #1a1a2e;
+            padding: 18px;
+            border-radius: 12px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        .bank-details p {
+            margin: 8px 0;
+        }
+        .paid-btn {
+            background: #00a86b !important;
+            font-size: 18px;
+            padding: 15px !important;
+        }
+        .paid-btn:hover {
+            background: #008a55 !important;
+        }
+        
+        .admin-container {
+            display: flex;
+            min-height: 100vh;
+            background: #0a0a0a;
+            width: 100%;
+        }
+        .admin-sidebar {
+            width: 280px;
+            background: #1a1a2e;
+            color: white;
+            padding: 30px 20px;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            left: 0;
+            top: 0;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+        }
+        .admin-sidebar h2 {
+            margin-bottom: 35px;
+            font-size: 22px;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+        .admin-sidebar nav a {
+            display: block;
+            color: white;
+            text-decoration: none;
+            padding: 14px 18px;
+            margin: 8px 0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.3s;
+            font-weight: 500;
+        }
+        .admin-sidebar nav a:hover {
+            background: #e94560;
+            transform: translateX(5px);
+        }
+        .admin-main {
+            flex: 1;
+            margin-left: 280px;
+            padding: 30px;
+            width: calc(100% - 280px);
+        }
+        .admin-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 25px;
+            margin-bottom: 35px;
+        }
+        .stat-card {
+            background: #1e1e2e;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: 0.3s;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-card h3 {
+            color: #aaa;
+            font-size: 13px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .stat-card .number {
+            font-size: 38px;
+            font-weight: bold;
+            color: #e94560;
+        }
+        .admin-section {
+            background: #1e1e2e;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            width: 100%;
+        }
+        .admin-section h2 {
+            color: white;
+            margin-bottom: 25px;
+            font-size: 24px;
+            border-left: 4px solid #e94560;
+            padding-left: 15px;
+        }
+        .admin-section h3 {
+            color: white;
+            margin: 25px 0 15px 0;
+            font-size: 18px;
+        }
+        
+        .admin-table-container {
+            overflow-x: auto;
+            width: 100%;
+            border-radius: 12px;
+        }
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #2a2a3e;
+            color: white;
+            border-radius: 12px;
+            overflow: hidden;
+            font-size: 14px;
+        }
+        .admin-table th {
+            background: #e94560;
+            color: white;
+            padding: 14px 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        .admin-table td {
+            padding: 12px;
+            border-bottom: 1px solid #3a3a4e;
+        }
+        .admin-table tr:hover {
+            background: #3a3a4e;
+        }
+        
+        .delete-btn {
+            background: #e94560;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            color: white;
+            font-size: 12px;
+            transition: 0.3s;
+        }
+        .delete-btn:hover {
+            background: #c73e55;
+            transform: scale(1.05);
+        }
+        .sign-out-btn {
+            background: #e94560;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 40px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .sign-out-btn:hover {
+            background: #c73e55;
+            transform: scale(1.02);
+        }
+        
+        .add-game-form {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 20px 0 25px 0;
+            background: #2a2a3e;
+            padding: 20px;
+            border-radius: 12px;
+        }
+        .add-game-form input, .add-game-form select {
+            padding: 10px 15px;
+            border: 1px solid #3a3a4e;
+            border-radius: 8px;
+            background: #1e1e2e;
+            color: white;
+            flex: 1;
+            min-width: 140px;
+        }
+        .add-game-form button {
+            background: #e94560;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+        }
+        .add-game-form button:hover {
+            background: #c73e55;
+        }
+        
+        #searchInput {
+            width: 100%;
+            padding: 12px 15px;
+            margin: 15px 0;
+            border-radius: 10px;
+            border: none;
+            font-size: 16px;
+            background: rgba(255,255,255,0.9);
+        }
+        
+        .download-link {
+            display: block;
+            background: #00a86b;
+            color: white;
+            text-decoration: none;
+            padding: 14px;
+            margin: 12px 0;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .download-link:hover {
+            background: #008a55;
+            transform: translateX(5px);
+        }
+        .order-again-btn {
+            background: #e94560;
+            margin-top: 20px;
+        }
+        .game-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        @media (max-width: 768px) {
+            .admin-sidebar {
+                width: 220px;
+            }
+            .admin-main {
+                margin-left: 220px;
+                width: calc(100% - 220px);
+                padding: 20px;
+            }
+            .admin-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .card {
+                margin: 20px;
+                padding: 20px;
+            }
+        }
+        @media (max-width: 480px) {
+            .admin-sidebar {
+                width: 100%;
+                position: relative;
+                height: auto;
+            }
+            .admin-main {
+                margin-left: 0;
+                width: 100%;
+            }
+            .admin-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="loginPage" class="card">
+    <h2>Login</h2>
+    <input type="text" id="loginUsername" placeholder="Username">
+    <input type="password" id="loginPassword" placeholder="Password">
+    <button onclick="login()">Login</button>
+    <p>No account?</p>
+    <button onclick="showPage('signupPage')">Sign Up</button>
+</div>
+
+<div id="signupPage" class="card" style="display:none;">
+    <h2>Sign Up</h2>
+    <input type="text" id="signupUsername" placeholder="Username">
+    <input type="password" id="signupPassword" placeholder="Password">
+    <button onclick="signup()">Create Account</button>
+    <button onclick="showPage('loginPage')">⬅ Back</button>
+</div>
+
+<div id="homePage" class="card" style="display:none;">
+    <h2 id="welcomeText">Hi, Player</h2>
+    <input type="text" id="searchInput" placeholder="Search games...">
+    <div class="game-grid" id="categoryGrid"></div>
+    <button onclick="viewCart()">🛒 View Cart (<span id="cartCount">0</span>)</button>
+    <button onclick="logout()">Sign Out</button>
+</div>
+
+<div id="cartPage" class="card" style="display:none;">
+    <h2>Your Cart</h2>
+    <div id="cartItems"></div>
+    <div id="cartTotal" class="total"></div>
+    <button onclick="goToPayment()">💳 Proceed to Payment</button>
+    <button onclick="showPage('homePage')">⬅ Back to Games</button>
+</div>
+
+<div id="paymentPage" class="card" style="display:none;">
+    <h2>💳 Select Payment Method</h2>
+    <div id="paymentSummary"></div>
+    <div id="gcashOption" class="payment-option" onclick="selectPaymentMethod('gcash')">
+        <h3>📱 GCash</h3>
+        <p>Scan QR code or send to GCash number</p>
+    </div>
+    <div id="bdoOption" class="payment-option" onclick="selectPaymentMethod('bdo')">
+        <h3>🏦 BDO</h3>
+        <p>Bank Transfer</p>
+    </div>
+    <div id="bpiOption" class="payment-option" onclick="selectPaymentMethod('bpi')">
+        <h3>🏦 BPI</h3>
+        <p>Bank Transfer</p>
+    </div>
+    <div id="metrobankOption" class="payment-option" onclick="selectPaymentMethod('metrobank')">
+        <h3>🏦 Metrobank</h3>
+        <p>Bank Transfer</p>
+    </div>
+    <div id="paymentDetails" style="display:none;"></div>
+    <button id="confirmPaymentBtn" class="paid-btn" style="display:none;" onclick="processPayment()">✅ I HAVE PAID</button>
+    <button onclick="showPage('cartPage')">⬅ Back to Cart</button>
+</div>
+
+<div id="downloadPage" class="card" style="display:none;">
+    <h2>🎉 Payment Successful!</h2>
+    <p>Thank you for your purchase!</p>
+    <div id="downloadLinks"></div>
+    <button class="order-again-btn" onclick="orderAgain()">🛒 Order Again</button>
+    <button onclick="logout()">Sign Out</button>
+</div>
+
+<div id="adminDashboardPage" style="display:none;">
+    <div class="admin-container">
+        <div class="admin-sidebar">
+            <h2>NAVIGATR ADMIN</h2>
+            <nav>
+                <a onclick="showAdminSection('dashboard')">📊 Dashboard</a>
+                <a onclick="showAdminSection('orders')">📦 Orders</a>
+                <a onclick="showAdminSection('payments')">💰 Payments</a>
+                <a onclick="showAdminSection('games')">🎮 Manage Games</a>
+                <a onclick="showAdminSection('users')">👥 Users</a>
+            </nav>
+            <button class="sign-out-btn" onclick="logout()">🚪 Sign Out</button>
+        </div>
+        <div class="admin-main">
+            <div id="adminDashboard" class="admin-section">
+                <h2>Dashboard</h2>
+                <div class="admin-stats" id="statsContainer">Loading...</div>
+            </div>
+            <div id="adminOrders" class="admin-section" style="display:none;">
+                <h2>All Orders</h2>
+                <div class="admin-table-container" id="ordersTable">Loading orders...</div>
+            </div>
+            <div id="adminPayments" class="admin-section" style="display:none;">
+                <h2>All Payments</h2>
+                <div class="admin-table-container" id="paymentsTable">Loading payments...</div>
+            </div>
+            <div id="adminGames" class="admin-section" style="display:none;">
+                <h2>Manage Games</h2>
+                <h3>Add New Game</h3>
+                <div class="add-game-form">
+                    <input type="text" id="newGameName" placeholder="Game Name">
+                    <select id="newGameCategory">
+                        <option>Action</option><option>Racing</option><option>Open World</option>
+                        <option>FPS</option><option>RPG</option><option>Adventure</option><option>Horror</option>
+                    </select>
+                    <input type="text" id="newGameDesc" placeholder="Description">
+                    <input type="text" id="newGameLink" placeholder="Download Link">
+                    <input type="number" id="newGamePrice" placeholder="Price">
+                    <button onclick="addNewGame()">➕ Add Game</button>
+                </div>
+                <h3>Existing Games</h3>
+                <div class="admin-table-container" id="gamesList">Loading games...</div>
+            </div>
+            <div id="adminUsers" class="admin-section" style="display:none;">
+                <h2>All Users</h2>
+                <div class="admin-table-container" id="usersTable">Loading users...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="recommendPage" class="card" style="display:none;">
+    <h2 id="recommendTitle"></h2>
+    <div id="recommendGrid" class="game-grid"></div>
+    <button onclick="showPage('homePage')">⬅ Back</button>
+</div>
+
+<div id="gameDetailsPage" class="card" style="display:none;">
+    <h2 id="gameTitle"></h2>
+    <p id="gameDesc"></p>
+    <p id="gamePrice"></p>
+    <p><b>Category:</b> <span id="gameChar"></span></p>
+    <button onclick="addToCartFromDetail()">🛒 Add to Cart</button>
+    <button onclick="showPage('recommendPage')">⬅ Back</button>
+</div>
+
+<script>
+    let currentUser = null;
+    let gamesData = [];
+    let cart = [];
+    let currentOrderId = null;
+    let currentOrderGames = [];
+    let selectedPaymentMethod = null;
+    const serverUrl = "http://localhost:3000";
+    
+    const paymentMethods = {
+        gcash: { name: "GCash", number: "0912 345 6789", account: "NAVIGATR Games", qr: true },
+        bdo: { name: "BDO", number: "1234 5678 9012", account: "NAVIGATR Games", qr: false },
+        bpi: { name: "BPI", number: "9876 5432 1098", account: "NAVIGATR Games", qr: false },
+        metrobank: { name: "Metrobank", number: "5678 1234 5678", account: "NAVIGATR Games", qr: false }
+    };
+    
+    function loadCart() {
+        const saved = localStorage.getItem('cart');
+        if (saved) cart = JSON.parse(saved);
+        updateCartCount();
+    }
+    
+    function saveCart() {
+        localStorage.setItem('cart', JSON.stringify(cart));
+        updateCartCount();
+    }
+    
+    function updateCartCount() {
+        const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+        const cartCount = document.getElementById('cartCount');
+        if (cartCount) cartCount.innerText = count;
+    }
+    
+    function addToCart(game) {
+        const existing = cart.find(item => item.id === game.id);
+        if (existing) {
+            existing.quantity++;
+        } else {
+            cart.push({
+                id: game.id,
+                name: game.name,
+                price: game.price || 0,
+                quantity: 1,
+                download_link: game.download_link,
+                image_url: game.image_url
+            });
+        }
+        saveCart();
+        alert(`${game.name} added to cart!`);
+    }
+    
+    function addToCartFromDetail() {
+        const game = currentGameDetail;
+        if (game) addToCart(game);
+    }
+    
+    function viewCart() {
+        displayCart();
+        showPage('cartPage');
+    }
+    
+    function displayCart() {
+        const container = document.getElementById('cartItems');
+        if (!container) return;
+        if (cart.length === 0) {
+            container.innerHTML = '<p>Your cart is empty.</p>';
+            document.getElementById('cartTotal').innerHTML = '';
+            return;
+        }
+        let html = '';
+        let total = 0;
+        cart.forEach((item, index) => {
+            const itemTotal = item.price * item.quantity;
+            total += itemTotal;
+            html += `<div class="cart-item"><span><strong>${item.name}</strong> x ${item.quantity}</span><span>₱${itemTotal}</span><button class="remove-btn" onclick="removeFromCart(${index})">✕</button></div>`;
+        });
+        container.innerHTML = html;
+        document.getElementById('cartTotal').innerHTML = `Total: ₱${total}`;
+    }
+    
+    function removeFromCart(index) {
+        cart.splice(index, 1);
+        saveCart();
+        displayCart();
+    }
+    
+    function goToPayment() {
+        if (cart.length === 0) {
+            alert('Your cart is empty!');
+            return;
+        }
+        selectedPaymentMethod = null;
+        displayPaymentSummary();
+        resetPaymentOptions();
+        document.getElementById('paymentDetails').style.display = 'none';
+        document.getElementById('confirmPaymentBtn').style.display = 'none';
+        showPage('paymentPage');
+    }
+    
+    function resetPaymentOptions() {
+        const options = ['gcashOption', 'bdoOption', 'bpiOption', 'metrobankOption'];
+        options.forEach(opt => {
+            const el = document.getElementById(opt);
+            if (el) el.classList.remove('selected');
+        });
+    }
+    
+    function displayPaymentSummary() {
+        const container = document.getElementById('paymentSummary');
+        let html = '<h3>Order Summary:</h3>';
+        let total = 0;
+        cart.forEach(item => {
+            const itemTotal = item.price * item.quantity;
+            total += itemTotal;
+            html += `<div class="cart-item"><span>${item.name} x ${item.quantity}</span><span>₱${itemTotal}</span></div>`;
+        });
+        html += `<div class="total">Total: ₱${total}</div>`;
+        container.innerHTML = html;
+    }
+    
+    function selectPaymentMethod(method) {
+        selectedPaymentMethod = method;
+        resetPaymentOptions();
+        document.getElementById(`${method}Option`).classList.add('selected');
+        const payment = paymentMethods[method];
+        let detailsHtml = '';
+        if (method === 'gcash') {
+            detailsHtml = `<div class="qr-code"><img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=NAVIGATR-GCASH-${Date.now()}" alt="GCash QR Code"><p>Scan to pay</p></div><div class="bank-details"><p><strong>📱 GCash Number:</strong> ${payment.number}</p><p><strong>Account Name:</strong> ${payment.account}</p></div>`;
+        } else {
+            detailsHtml = `<div class="bank-details"><p><strong>🏦 ${payment.name} Account Number:</strong> ${payment.number}</p><p><strong>Account Name:</strong> ${payment.account}</p><p style="font-size:12px; margin-top:10px;">After payment, click "I HAVE PAID" below</p></div>`;
+        }
+        document.getElementById('paymentDetails').innerHTML = detailsHtml;
+        document.getElementById('paymentDetails').style.display = 'block';
+        document.getElementById('confirmPaymentBtn').style.display = 'block';
+    }
+    
+    async function processPayment() {
+        if (!selectedPaymentMethod) {
+            alert('Please select a payment method first');
+            return;
+        }
+        const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const items = cart.map(item => ({ game_id: item.id, quantity: item.quantity, price: item.price }));
+        const btn = document.getElementById('confirmPaymentBtn');
+        btn.disabled = true;
+        btn.innerText = 'Processing...';
+        try {
+            const orderResponse = await fetch(`${serverUrl}/api/orders/create`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: currentUser.id, items: items, total_amount: total, shipping_address: "Digital Download - No shipping needed" })
+            });
+            const orderData = await orderResponse.json();
+            if (!orderData.success) {
+                alert('Failed to create order: ' + orderData.error);
+                btn.disabled = false;
+                btn.innerText = '✅ I HAVE PAID';
+                return;
+            }
+            currentOrderId = orderData.order_id;
+            currentOrderGames = [...cart];
+            const paymentResponse = await fetch(`${serverUrl}/api/payment/gcash`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order_id: currentOrderId, user_id: currentUser.id, amount: total })
+            });
+            const paymentData = await paymentResponse.json();
+            if (paymentData.success) {
+                cart = [];
+                saveCart();
+                const downloadData = currentOrderGames.map(game => ({ name: game.name, download_link: game.download_link }));
+                sessionStorage.setItem('downloadData', JSON.stringify(downloadData));
+                window.location.href = window.location.pathname + '?page=download';
+            } else {
+                alert('Payment failed: ' + paymentData.error);
+                btn.disabled = false;
+                btn.innerText = '✅ I HAVE PAID';
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error processing payment');
+            btn.disabled = false;
+            btn.innerText = '✅ I HAVE PAID';
+        }
+    }
+    
+    function loadDownloadPage() {
+        const container = document.getElementById('downloadLinks');
+        const savedData = sessionStorage.getItem('downloadData');
+        if (savedData) {
+            const games = JSON.parse(savedData);
+            let html = '<h3>Your Games:</h3>';
+            games.forEach(game => {
+                if (game.download_link && game.download_link !== "") {
+                    html += `<a href="${game.download_link}" target="_blank" class="download-link">📥 Download ${game.name}</a>`;
+                } else {
+                    html += `<p>⚠️ No download link available for ${game.name}</p>`;
+                }
+            });
+            container.innerHTML = html;
+            sessionStorage.removeItem('downloadData');
+        }
+        showPage('downloadPage');
+    }
+    
+    function orderAgain() {
+        cart = [];
+        saveCart();
+        showPage('homePage');
+        loadGames();
+    }
+    
+    function showPage(pageId) {
+        const pages = ['loginPage', 'signupPage', 'homePage', 'recommendPage', 'gameDetailsPage', 'cartPage', 'paymentPage', 'downloadPage'];
+        pages.forEach(p => {
+            const el = document.getElementById(p);
+            if (el) el.style.display = 'none';
+        });
+        const adminPage = document.getElementById('adminDashboardPage');
+        if (adminPage) adminPage.style.display = 'none';
+        if (pageId === 'adminDashboardPage') {
+            document.getElementById('adminDashboardPage').style.display = 'block';
+            loadAdminStats();
+            loadAdminGames();
+        } else {
+            const target = document.getElementById(pageId);
+            if (target) target.style.display = 'block';
+        }
+    }
+    
+    async function login() {
+        const username = document.getElementById('loginUsername').value;
+        const password = document.getElementById('loginPassword').value;
+        if (!username || !password) {
+            alert('Enter username and password');
+            return;
+        }
+        try {
+            const response = await fetch(`${serverUrl}/api/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                currentUser = { id: data.id, username: data.username, is_admin: data.is_admin };
+                sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+                loadCart();
+                if (data.is_admin === true) {
+                    showPage('adminDashboardPage');
+                    loadAdminStats();
+                    loadAdminGames();
+                } else {
+                    document.getElementById('welcomeText').innerText = `Hi, ${username}`;
+                    showPage('homePage');
+                    loadGames();
+                }
+            } else {
+                alert(data.error || 'Login failed');
+            }
+        } catch (error) {
+            alert('Server not running');
+        }
+    }
+    
+    async function signup() {
+        const username = document.getElementById('signupUsername').value;
+        const password = document.getElementById('signupPassword').value;
+        if (!username || !password) {
+            alert('Enter username and password');
+            return;
+        }
+        try {
+            const response = await fetch(`${serverUrl}/api/signup`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            if (response.ok) {
+                alert('Signup successful! Please login.');
+                showPage('loginPage');
+            } else {
+                const data = await response.json();
+                alert(data.error || 'Signup failed');
+            }
+        } catch (error) {
+            alert('Server not running');
+        }
+    }
+    
+    function logout() {
+        currentUser = null;
+        sessionStorage.removeItem('currentUser');
+        cart = [];
+        saveCart();
+        showPage('loginPage');
+    }
+    
+    async function loadGames() {
+        try {
+            const response = await fetch(`${serverUrl}/games`);
+            gamesData = await response.json();
+            displayCategories();
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+    
+    function displayCategories() {
+        const grid = document.getElementById('categoryGrid');
+        if (!grid) return;
+        const categories = [...new Set(gamesData.map(g => g.category))];
+        grid.innerHTML = '';
+        categories.forEach(cat => {
+            const firstGame = gamesData.find(g => g.category === cat);
+            let bgImage = firstGame && firstGame.image_url ? firstGame.image_url : `https://via.placeholder.com/300x200?text=${cat}`;
+            const div = document.createElement('div');
+            div.className = 'game-card';
+            div.style.backgroundImage = `url('${bgImage}')`;
+            div.innerHTML = `<span>${cat}</span>`;
+            div.onclick = () => selectGame(cat);
+            grid.appendChild(div);
+        });
+    }
+    
+    function selectGame(category) {
+        const grid = document.getElementById('recommendGrid');
+        const title = document.getElementById('recommendTitle');
+        if (title) title.innerText = category + ' Games';
+        const filtered = gamesData.filter(g => g.category === category);
+        grid.innerHTML = '';
+        filtered.forEach(game => {
+            const div = document.createElement('div');
+            div.className = 'recommend-card';
+            if (game.image_url) {
+                div.style.backgroundImage = `url('${game.image_url}')`;
+                div.style.backgroundSize = 'cover';
+                div.style.backgroundPosition = 'center';
+            }
+            div.innerHTML = `<span>${game.name}</span>`;
+            div.onclick = () => showGameDetails(game);
+            grid.appendChild(div);
+        });
+        showPage('recommendPage');
+    }
+    
+    let currentGameDetail = null;
+    
+    function showGameDetails(game) {
+        currentGameDetail = game;
+        document.getElementById('gameTitle').innerText = game.name;
+        document.getElementById('gameDesc').innerText = game.description || 'No description';
+        document.getElementById('gameChar').innerText = game.category || 'N/A';
+        let priceText = game.price === 0 ? 'FREE' : `₱${game.price}`;
+        document.getElementById('gamePrice').innerHTML = `<b>Price: ${priceText}</b>`;
+        showPage('gameDetailsPage');
+    }
+    
+    function searchGames() {
+        const term = document.getElementById('searchInput').value.toLowerCase();
+        if (!term) { displayCategories(); return; }
+        const filtered = gamesData.filter(g => g.name.toLowerCase().includes(term));
+        const grid = document.getElementById('recommendGrid');
+        const title = document.getElementById('recommendTitle');
+        if (title) title.innerText = 'Search Results';
+        grid.innerHTML = '';
+        filtered.forEach(game => {
+            const div = document.createElement('div');
+            div.className = 'recommend-card';
+            if (game.image_url) {
+                div.style.backgroundImage = `url('${game.image_url}')`;
+                div.style.backgroundSize = 'cover';
+                div.style.backgroundPosition = 'center';
+            }
+            div.innerHTML = `<span>${game.name}</span>`;
+            div.onclick = () => showGameDetails(game);
+            grid.appendChild(div);
+        });
+        showPage('recommendPage');
+    }
+    
+    function showAdminSection(section) {
+        const sections = ['adminDashboard', 'adminOrders', 'adminPayments', 'adminGames', 'adminUsers'];
+        sections.forEach(s => {
+            const el = document.getElementById(s);
+            if (el) el.style.display = 'none';
+        });
+        document.getElementById(`admin${section.charAt(0).toUpperCase() + section.slice(1)}`).style.display = 'block';
+        if (section === 'orders') loadAdminOrders();
+        if (section === 'payments') loadAdminPayments();
+        if (section === 'games') loadAdminGames();
+        if (section === 'users') loadAdminUsers();
+        if (section === 'dashboard') loadAdminStats();
+    }
+    
+    async function loadAdminStats() {
+        if (!currentUser) return;
+        try {
+            const res = await fetch(`${serverUrl}/api/admin/stats?admin_id=${currentUser.id}`);
+            const stats = await res.json();
+            document.getElementById('statsContainer').innerHTML = `
+                <div class="stat-card"><h3>Total Users</h3><div class="number">${stats.total_users || 0}</div></div>
+                <div class="stat-card"><h3>Total Orders</h3><div class="number">${stats.total_orders || 0}</div></div>
+                <div class="stat-card"><h3>Total Sales</h3><div class="number">₱${stats.total_sales || 0}</div></div>
+                <div class="stat-card"><h3>Total Games</h3><div class="number">${stats.total_games || 0}</div></div>
+            `;
+        } catch (error) {
+            console.error('Stats error:', error);
+            document.getElementById('statsContainer').innerHTML = '<div class="stat-card">Error loading stats</div>';
+        }
+    }
+    
+    async function loadAdminOrders() {
+        if (!currentUser) return;
+        try {
+            const res = await fetch(`${serverUrl}/api/admin/orders?admin_id=${currentUser.id}`);
+            const orders = await res.json();
+            if (orders.error) {
+                document.getElementById('ordersTable').innerHTML = `<p style="color:red;">${orders.error}</p>`;
+                return;
+            }
+            if (!orders || orders.length === 0) {
+                document.getElementById('ordersTable').innerHTML = '<p>No orders found.</p>';
+                return;
+            }
+            let html = '<table class="admin-table"><thead><tr>';
+            html += '<th>Order ID</th><th>User</th><th>Game Name(s)</th><th>Status</th><th>Date</th>';
+            html += '</tr></thead><tbody>';
+            orders.forEach(order => {
+                let statusColor = order.status === 'paid' ? '#00a86b' : '#e94560';
+                html += `<tr>
+                    <td>${order.order_id}</td>
+                    <td>${order.username}</td>
+                    <td>${order.game_names || '-'}</td>
+                    <td><span style="color: ${statusColor}">${order.status}</span></td>
+                    <td>${order.order_date}</td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            document.getElementById('ordersTable').innerHTML = html;
+        } catch (error) {
+            console.error('Orders error:', error);
+            document.getElementById('ordersTable').innerHTML = '<p>Error loading orders. Make sure server is running.</p>';
+        }
+    }
+    
+    async function loadAdminPayments() {
+        if (!currentUser) return;
+        try {
+            const res = await fetch(`${serverUrl}/api/admin/payments?admin_id=${currentUser.id}`);
+            const payments = await res.json();
+            if (payments.error) {
+                document.getElementById('paymentsTable').innerHTML = `<p style="color:red;">${payments.error}</p>`;
+                return;
+            }
+            if (!payments || payments.length === 0) {
+                document.getElementById('paymentsTable').innerHTML = '<p>No payments found.</p>';
+                return;
+            }
+            let html = '<table class="admin-table"><thead><tr>';
+            html += '<th>Payment ID</th><th>Order ID</th><th>User</th><th>Amount</th><th>Payment Method</th><th>Status</th><th>Transaction ID</th><th>Date</th>';
+            html += '</tr></thead><tbody>';
+            payments.forEach(p => {
+                html += `<tr>
+                    <td>${p.payment_id}</td>
+                    <td>${p.order_id}</td>
+                    <td>${p.username}</td>
+                    <td>₱${p.amount}</td>
+                    <td>${p.payment_method || 'gcash'}</td>
+                    <td><span style="color: #00a86b">${p.payment_status}</span></td>
+                    <td><small>${p.transaction_id || '-'}</small></td>
+                    <td>${p.payment_date}</td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            document.getElementById('paymentsTable').innerHTML = html;
+        } catch (error) {
+            console.error('Payments error:', error);
+            document.getElementById('paymentsTable').innerHTML = '<p>Error loading payments. Make sure server is running.</p>';
+        }
+    }
+    
+    async function loadAdminGames() {
+        if (!currentUser) return;
+        try {
+            const res = await fetch(`${serverUrl}/games`);
+            const games = await res.json();
+            let html = '<table class="admin-table"><thead><tr>';
+            html += '<th>ID</th><th>Name</th><th>Category</th><th>Price</th><th>Action</th>';
+            html += '</tr></thead><tbody>';
+            games.forEach(game => {
+                html += `<tr>
+                    <td>${game.id}</td>
+                    <td>${game.name}</td>
+                    <td>${game.category}</td>
+                    <td>₱${game.price || 0}</td>
+                    <td><button class="delete-btn" onclick="deleteGame(${game.id})">Delete</button></td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            document.getElementById('gamesList').innerHTML = html;
+        } catch (error) {
+            console.error('Games error:', error);
+            document.getElementById('gamesList').innerHTML = '<p>Error loading games. Make sure server is running.</p>';
+        }
+    }
+    
+    async function loadAdminUsers() {
+        if (!currentUser) return;
+        try {
+            const res = await fetch(`${serverUrl}/api/admin/users?admin_id=${currentUser.id}`);
+            const users = await res.json();
+            if (users.error) {
+                document.getElementById('usersTable').innerHTML = `<p style="color:red;">${users.error}</p>`;
+                return;
+            }
+            let html = '<table class="admin-table"><thead><tr>';
+            html += '<th>ID</th><th>Username</th><th>Type</th><th>Created At</th>';
+            html += '</tr></thead><tbody>';
+            users.forEach(user => {
+                html += `<tr>
+                    <td>${user.id}</td>
+                    <td>${user.username}</td>
+                    <td>${user.is_admin === 1 ? '<span style="color:#e94560">👑 Admin</span>' : '👤 User'}</td>
+                    <td>${user.created_at || '-'}</td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            document.getElementById('usersTable').innerHTML = html;
+        } catch (error) {
+            console.error('Users error:', error);
+            document.getElementById('usersTable').innerHTML = '<p>Error loading users. Make sure server is running.</p>';
+        }
+    }
+    
+    async function addNewGame() {
+        const name = document.getElementById('newGameName').value;
+        const category = document.getElementById('newGameCategory').value;
+        const desc = document.getElementById('newGameDesc').value;
+        const link = document.getElementById('newGameLink').value;
+        const price = document.getElementById('newGamePrice').value;
+        if (!name) { alert('Enter game name'); return; }
+        await fetch(`${serverUrl}/games`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, category, description: desc, download_link: link, price: parseFloat(price) || 0 })
+        });
+        alert('Game added!');
+        loadAdminGames();
+        loadAdminStats();
+    }
+    
+    async function deleteGame(id) {
+        if (confirm('Delete this game?')) {
+            await fetch(`${serverUrl}/games/${id}`, { method: 'DELETE' });
+            loadAdminGames();
+            loadAdminStats();
+        }
+    }
+    
+    function checkUrlForPage() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const page = urlParams.get('page');
+        if (page === 'download') {
+            loadDownloadPage();
+        }
+    }
+    
+    window.addEventListener('DOMContentLoaded', () => {
+        const savedUser = sessionStorage.getItem('currentUser');
+        if (savedUser) {
+            currentUser = JSON.parse(savedUser);
+            loadCart();
+            if (currentUser.is_admin) {
+                showPage('adminDashboardPage');
+                loadAdminStats();
+                loadAdminGames();
+            } else {
+                showPage('homePage');
+                loadGames();
+                document.getElementById('welcomeText').innerText = `Hi, ${currentUser.username}`;
+            }
+        }
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') searchGames();
+            });
+        }
+        checkUrlForPage();
+    });
+</script>
+</body>
+</html>
