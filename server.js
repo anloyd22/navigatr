@@ -19,6 +19,11 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "index.html"));
 });
 
+// ================ SERVE XSL FILES ================
+app.get("/games.xsl", (req, res) => {
+    res.sendFile(path.join(__dirname, "games.xsl"));
+});
+
 // PostgreSQL connection
 const db = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -645,39 +650,30 @@ app.get("/api/admin/export/users", async (req, res) => {
     }
 });
 
-// ================ TEST XML ROUTES ================
+// ================ XML EXPORT ================
 
-// Simple test XML
-app.get("/api/test/xml", async (req, res) => {
-    try {
-        let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
-        xml += '<test>\n';
-        xml += '  <message>Hello World from NAVIGATR!</message>\n';
-        xml += '</test>';
-        
-        res.setHeader("Content-Type", "application/xml");
-        res.send(xml);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+// Helper function to escape XML special characters
+function escapeXml(str) {
+    if (!str) return '';
+    return str.replace(/[<>&'"]/g, function(c) {
+        switch (c) {
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '&': return '&amp;';
+            case "'": return '&apos;';
+            case '"': return '&quot;';
+            default: return c;
+        }
+    });
+}
 
-// Raw games data
-app.get("/api/raw/games", async (req, res) => {
-    try {
-        const result = await db.query("SELECT id, name, category, price FROM games LIMIT 10");
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Simple games XML (no XSL)
+// Simple games XML with XSL
 app.get("/api/simple/games-xml", async (req, res) => {
     try {
         const result = await db.query("SELECT id, name, category, price FROM games ORDER BY name");
         
         let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+        xml += '<?xml-stylesheet type="text/xsl" href="/games.xsl"?>\n';
         xml += '<games>\n';
         
         for (const game of result.rows) {
@@ -697,21 +693,6 @@ app.get("/api/simple/games-xml", async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-
-// Helper function to escape XML special characters
-function escapeXml(str) {
-    if (!str) return '';
-    return str.replace(/[<>&'"]/g, function(c) {
-        switch (c) {
-            case '<': return '&lt;';
-            case '>': return '&gt;';
-            case '&': return '&amp;';
-            case "'": return '&apos;';
-            case '"': return '&quot;';
-            default: return c;
-        }
-    });
-}
 
 // ================ START SERVER ================
 const PORT = process.env.PORT || 3000;
