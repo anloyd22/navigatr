@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const { Pool } = require('pg');
 const bcrypt = require("bcrypt");
+const path = require("path");
 
 const app = express();
 const saltRounds = 10;
@@ -12,6 +13,11 @@ app.use(cors({
     allowedHeaders: ["Content-Type"]
 }));
 app.use(express.json());
+
+// Serve HTML file
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "index.html"));
+});
 
 // PostgreSQL connection
 const db = new Pool({
