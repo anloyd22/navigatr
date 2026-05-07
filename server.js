@@ -618,6 +618,199 @@ app.get("/api/admin/export/games", async (req, res) => {
     }
 });
 
+// Export users to CSV
+app.get("/api/admin/export/users", async (req, res) => {
+    const { admin_id } = req.query;
+    
+    try {
+        const adminCheck = await db.query("SELECT is_admin FROM users WHERE id = $1", [admin_id]);
+        if (adminCheck.rows.length === 0 || adminCheck.rows[0].is_admin !== 1) {
+            res.status(403).json({ error: "Access denied. Admin only." });
+            return;
+        }
+        
+        const result = await db.query("SELECT id, username, is_admin, created_at FROM users ORDER BY id");
+        
+        let csv = "ID,Username,Admin,Created At\n";
+        result.rows.forEach(row => {
+            csv += `"${row.id}","${row.username}","${row.is_admin === 1 ? 'Admin' : 'User'}","${row.created_at}"\n`;
+        });
+        
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader("Content-Disposition", "attachment; filename=users_export.csv");
+        res.send(csv);
+        
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ================ XML EXPORT ================
+
+// Helper function to escape XML special characters
+function escapeXml(str) {
+    if (!str) return '';
+    return str.replace(/[<>&'"]/g, function(c) {
+        switch (c) {
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '&': return '&amp;';
+            case "'": return '&apos;';
+            case '"': return '&quot;';
+            default: return c;
+        }
+    });
+}
+
+// Export orders to XML
+app.get("/api/admin/xml/orders", async (req, res) => {
+    const { admin_id } = req.query;
+    
+    try {
+        const adminCheck = await db.query("SELECT is_admin FROM users WHERE id = $1", [admin_id]);
+        if (adminCheck.rows.length === 0 || adminCheck.rows[0].is_admin !== 1) {
+            res.status(403).json({ error: "Access denied. Admin only." });
+            return;
+        }
+        
+        const result = await db.query(`
+            SELECT 
+                o.order_id, 
+                u.username, 
+                o.total_amount, 
+                o.status, 
+                o.payment_method,
+                o.order_date,
+                STRING_AGG(g.name, ', ') as game_names
+            FROM orders o
+            JOIN users u ON o.user_id = u.id
+            LEFT JOIN order_items oi ON o.order_id = oi.order_id
+            LEFT JOIN games g ON oi.game_id = g.id
+            GROUP BY o.order_id, u.username, o.total_amount, o.status, o.payment_method, o.order_date
+            ORDER BY o.order_date DESC
+        `);
+        
+        let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+        xml += '<?xml-stylesheet type="text/xsl" href="https://navigatr-production.up.railway.app/orders.xsl"?>\n';
+        xml += '<orders>\n';
+        
+        result.rows.forEach(order => {
+            xml += '  <order>\n';
+            xml += `    <order_id>${order.order_id}</order_id>\n`;
+            xml += `    <username>${escapeXml(order.username)}</username>\n`;
+            xml += `    <game_names>${escapeXml(order.game_names || '-')}</game_names>\n`;
+            xml += `    <total_amount>${order.total_amount}</total_amount>\n`;
+            xml += `    <status>${order.status}</status>\n`;
+            xml += `    <payment_method>${order.payment_method || '-'}</payment_method>\n`;
+            xml += `    <order_date>${order.order_date}</order_date>\n`;
+            xml += '  </order>\n';
+        });
+        
+        xml += '</orders>';
+        
+        res.setHeader("Content-Type", "application/xml");
+        res.setHeader("Content-Disposition", "attachment; filename=orders_export.xml");
+        res.send(xml);
+        
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Export games to XML
+app.get("/api/admin/xml/games", async (req, res) => {
+    const { admin_id } = req.query;
+    
+    try {
+        const adminCheck = await db.query("SELECT is_admin FROM users WHERE id = $1", [admin_id]);
+        if (adminCheck.rows.length === 0 || adminCheck.rows[0].is_admin !== 1) {
+            res.status(403).json({ error: "Access denied. Admin only." });
+            return;
+        }
+        
+        const result = await db.query("SELECT id, name, category, description, price, image_url, created_at FROM games ORDER BY name");
+        
+        let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+        xml += '<?xml-stylesheet type="text/xsl" href="https://navigatr-production.up.railway.app/games.xsl"?>\n';
+        xml += '<games>\n';
+        
+        result.rows.forEach(game => {
+            xml += '  <game>\n';
+            xml += `    <id>${game.id}</id>\n`;
+            xml += `    <name>${escapeXml(game.name)}</name>\n`;
+            xml += `    <category>${game.category}</category>\n`;
+            xml += `    <description>${escapeXml(game.description || '-')}</description>\n`;
+            xml += `    <price>${game.price}</price>\n`;
+            xml += `    <image_url>${game.image_url || ''}</image_url>\n`;
+            xml += `    <created_at>${game.created_at}</created_at>\n`;
+            xml += '  </game>\n';
+        });
+        
+        xml += '</games>';
+        
+        res.setHeader("Content-Type", "application/xml");
+        res.setHeader("Content-Disposition", "attachment; filename=games_export.xml");
+        res.send(xml);
+        
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Export payments to XML
+app.get("/api/admin/xml/payments", async (req, res) => {
+    const { admin_id } = req.query;
+    
+    try {
+        const adminCheck = await db.query("SELECT is_admin FROM users WHERE id = $1", [admin_id]);
+        if (adminCheck.rows.length === 0 || adminCheck.rows[0].is_admin !== 1) {
+            res.status(403).json({ error: "Access denied. Admin only." });
+            return;
+        }
+        
+        const result = await db.query(`
+            SELECT 
+                p.payment_id,
+                p.order_id,
+                u.username,
+                p.amount,
+                p.payment_method,
+                p.payment_status,
+                p.transaction_id,
+                p.payment_date
+            FROM payments p
+            JOIN users u ON p.user_id = u.id
+            ORDER BY p.payment_date DESC
+        `);
+        
+        let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+        xml += '<?xml-stylesheet type="text/xsl" href="https://navigatr-production.up.railway.app/payments.xsl"?>\n';
+        xml += '<payments>\n';
+        
+        result.rows.forEach(payment => {
+            xml += '  <payment>\n';
+            xml += `    <payment_id>${payment.payment_id}</payment_id>\n`;
+            xml += `    <order_id>${payment.order_id}</order_id>\n`;
+            xml += `    <username>${escapeXml(payment.username)}</username>\n`;
+            xml += `    <amount>${payment.amount}</amount>\n`;
+            xml += `    <payment_method>${payment.payment_method}</payment_method>\n`;
+            xml += `    <payment_status>${payment.payment_status}</payment_status>\n`;
+            xml += `    <transaction_id>${payment.transaction_id || '-'}</transaction_id>\n`;
+            xml += `    <payment_date>${payment.payment_date}</payment_date>\n`;
+            xml += '  </payment>\n';
+        });
+        
+        xml += '</payments>';
+        
+        res.setHeader("Content-Type", "application/xml");
+        res.setHeader("Content-Disposition", "attachment; filename=payments_export.xml");
+        res.send(xml);
+        
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ================ START SERVER ================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
