@@ -432,7 +432,6 @@
             overflow-y: auto;
         }
         
-        /* Export buttons style */
         .export-btn {
             background: #00a86b !important;
             margin-right: 10px;
@@ -572,7 +571,6 @@
                 <h2>All Orders</h2>
                 <div class="btn-group">
                     <button class="export-btn export-csv-btn" onclick="exportOrdersCSV()">📥 Export Orders to CSV</button>
-                    <button class="export-btn export-xml-btn" onclick="exportOrdersXML()">📄 Export Orders to XML</button>
                 </div>
                 <div class="admin-table-container" id="ordersTable">Loading orders...</div>
             </div>
@@ -580,7 +578,6 @@
                 <h2>All Payments</h2>
                 <div class="btn-group">
                     <button class="export-btn export-csv-btn" onclick="exportPaymentsCSV()">📥 Export Payments to CSV</button>
-                    <button class="export-btn export-xml-btn" onclick="exportPaymentsXML()">📄 Export Payments to XML</button>
                 </div>
                 <div class="admin-table-container" id="paymentsTable">Loading payments...</div>
             </div>
@@ -1027,7 +1024,6 @@
         if (section === 'dashboard') loadAdminStats();
     }
     
-    // CSV Export Functions
     async function exportOrdersCSV() {
         window.open(`${serverUrl}/api/admin/export/orders?admin_id=${currentUser.id}`, '_blank');
     }
@@ -1044,17 +1040,8 @@
         window.open(`${serverUrl}/api/admin/export/users?admin_id=${currentUser.id}`, '_blank');
     }
     
-    // XML Export Functions
-    async function exportOrdersXML() {
-        window.open(`${serverUrl}/api/admin/xml/orders?admin_id=${currentUser.id}`, '_blank');
-    }
-    
     async function exportGamesXML() {
-        window.open(`${serverUrl}/api/admin/xml/games?admin_id=${currentUser.id}`, '_blank');
-    }
-    
-    async function exportPaymentsXML() {
-        window.open(`${serverUrl}/api/admin/xml/payments?admin_id=${currentUser.id}`, '_blank');
+        window.open(`${serverUrl}/api/simple/games-xml`, '_blank');
     }
     
     async function loadAdminStats() {
@@ -1100,7 +1087,7 @@
                     <td>${order.order_date}</td>
                 </tr>`;
             });
-            html += '</tbody><tr>';
+            html += '</tbody></table>';
             document.getElementById('ordersTable').innerHTML = html;
         } catch (error) {
             console.error('Orders error:', error);
@@ -1123,7 +1110,7 @@
             }
             let html = '<table class="admin-table"><thead><tr>';
             html += '<th>Payment ID</th><th>Order ID</th><th>User</th><th>Amount</th><th>Payment Method</th><th>Status</th><th>Transaction ID</th><th>Date</th>';
-            html += '</tr></thead><tbody>';
+            html += '<tr></thead><tbody>';
             payments.forEach(p => {
                 html += `<tr>
                     <td>${p.payment_id}</td>
@@ -1134,9 +1121,9 @@
                     <td><span style="color: #00a86b">${p.payment_status}</span></td>
                     <td><small>${p.transaction_id || '-'}</small></td>
                     <td>${p.payment_date}</td>
-                <tr>`;
+                </tr>`;
             });
-            html += '</tbody></tr>';
+            html += '</tbody></table>';
             document.getElementById('paymentsTable').innerHTML = html;
         } catch (error) {
             console.error('Payments error:', error);
@@ -1183,14 +1170,14 @@
             html += '<th>ID</th><th>Username</th><th>Type</th><th>Created At</th>';
             html += '</tr></thead><tbody>';
             users.forEach(user => {
-                html += `<tr>
+                html += `</tr>
                     <td>${user.id}</td>
                     <td>${user.username}</td>
                     <td>${user.is_admin === 1 ? '<span style="color:#e94560">👑 Admin</span>' : '👤 User'}</td>
                     <td>${user.created_at || '-'}</td>
                 </tr>`;
             });
-            html += '</tbody></tr>';
+            html += '</tbody></table>';
             document.getElementById('usersTable').innerHTML = html;
         } catch (error) {
             console.error('Users error:', error);
