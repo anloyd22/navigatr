@@ -149,7 +149,7 @@ app.get("/games/:id", async (req, res) => {
 });
 
 app.post("/games", async (req, res) => {
-    const { name, category, description, download_link, price } = req.body;
+    const { name, category, description, download_link, price, image_url } = req.body;
     
     console.log("📌 [ADD GAME] Name:", name, "| Category:", category, "| Price: ₱" + price);
     
@@ -160,8 +160,8 @@ app.post("/games", async (req, res) => {
     
     try {
         const result = await db.query(
-            "INSERT INTO games (name, category, description, download_link, price) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-            [name, category, description || "", download_link || "", price || 0]
+            "INSERT INTO games (name, category, description, download_link, price, image_url) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+            [name, category, description || "", download_link || "", price || 0, image_url || ""]
         );
         console.log("✅ [ADD GAME] Success! ID:", result.rows[0].id, "-", name);
         res.json({ id: result.rows[0].id, message: "Game added successfully!" });
@@ -190,12 +190,12 @@ app.delete("/games/:id", async (req, res) => {
 
 app.put("/games/:id", async (req, res) => {
     const { id } = req.params;
-    const { name, category, description, download_link, price } = req.body;
+    const { name, category, description, download_link, price, image_url } = req.body;
     
     try {
         await db.query(
-            "UPDATE games SET name = $1, category = $2, description = $3, download_link = $4, price = $5 WHERE id = $6",
-            [name, category, description, download_link, price, id]
+            "UPDATE games SET name = $1, category = $2, description = $3, download_link = $4, price = $5, image_url = $6 WHERE id = $7",
+            [name, category, description, download_link, price, image_url, id]
         );
         res.json({ message: "Game updated successfully!" });
     } catch (err) {
@@ -508,6 +508,113 @@ app.post("/api/admin/log", async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         res.json({ success: false });
+    }
+});
+
+// ================ CSV EXPORT (EXCEL) ================
+
+// Export orders to CSV
+app.get("/api/admin/export/orders", async (req, res) => {
+    const { admin_id } = req.query;
+    
+    try {
+        const adminCheck = await db.query("SELECT is_admin FROM users WHERE id = $1", [admin_id]);
+        if (adminCheck.rows.length === 0 || adminCheck.rows[0].is_admin !== 1) {
+            res.status(403).json({ error: "Access denied. Admin only." });
+            return;
+        }
+        
+        const result = await db.query(`
+            SELECT 
+                o.order_id, 
+                u.username, 
+                o.total_amount, 
+                o.status, 
+                o.payment_method,
+                o.order_date
+            FROM orders o
+            JOIN users u ON o.user_id = u.id
+            ORDER BY o.order_date DESC
+        `);
+        
+        let csv = "Order ID,User,Total Amount,Status,Payment Method,Date\n";
+        result.rows.forEach(row => {
+            csv += `"${row.order_id}","${row.username}","${row.total_amount}","${row.status}","${row.payment_method || '-'}","${row.order_date}"\n`;
+        });
+        
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader("Content-Disposition", "attachment; filename=orders_export.csv");
+        res.send(csv);
+        
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Export payments to CSV
+app.get("/api/admin/export/payments", async (req, res) => {
+    const { admin_id } = req.query;
+    
+    try {
+        const adminCheck = await db.query("SELECT is_admin FROM users WHERE id = $1", [admin_id]);
+        if (adminCheck.rows.length === 0 || adminCheck.rows[0].is_admin !== 1) {
+            res.status(403).json({ error: "Access denied. Admin only." });
+            return;
+        }
+        
+        const result = await db.query(`
+            SELECT 
+                p.payment_id,
+                p.order_id,
+                u.username,
+                p.amount,
+                p.payment_method,
+                p.payment_status,
+                p.transaction_id,
+                p.payment_date
+            FROM payments p
+            JOIN users u ON p.user_id = u.id
+            ORDER BY p.payment_date DESC
+        `);
+        
+        let csv = "Payment ID,Order ID,User,Amount,Payment Method,Status,Transaction ID,Date\n";
+        result.rows.forEach(row => {
+            csv += `"${row.payment_id}","${row.order_id}","${row.username}","${row.amount}","${row.payment_method}","${row.payment_status}","${row.transaction_id || '-'}","${row.payment_date}"\n`;
+        });
+        
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader("Content-Disposition", "attachment; filename=payments_export.csv");
+        res.send(csv);
+        
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Export games to CSV
+app.get("/api/admin/export/games", async (req, res) => {
+    const { admin_id } = req.query;
+    
+    try {
+        const adminCheck = await db.query("SELECT is_admin FROM users WHERE id = $1", [admin_id]);
+        if (adminCheck.rows.length === 0 || adminCheck.rows[0].is_admin !== 1) {
+            res.status(403).json({ error: "Access denied. Admin only." });
+            return;
+        }
+        
+        const result = await db.query("SELECT id, name, category, price, created_at FROM games ORDER BY name");
+        
+        let csv = "ID,Name,Category,Price,Date Added\n";
+        result.rows.forEach(row => {
+            csv += `"${row.id}","${row.name}","${row.category}","${row.price}","${row.created_at}"\n`;
+        });
+        
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader("Content-Disposition", "attachment; filename=games_export.csv");
+        res.send(csv);
+        
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
