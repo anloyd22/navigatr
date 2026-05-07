@@ -709,7 +709,7 @@ app.get("/api/admin/xml/orders", async (req, res) => {
         xml += '</orders>';
         
         res.setHeader("Content-Type", "application/xml");
-        res.setHeader("Content-Disposition", "attachment; filename=orders_export.xml");
+        res.setHeader("Content-Disposition", "inline; filename=orders_export.xml");
         res.send(xml);
         
     } catch (err) {
@@ -749,7 +749,7 @@ app.get("/api/admin/xml/games", async (req, res) => {
         xml += '</games>';
         
         res.setHeader("Content-Type", "application/xml");
-        res.setHeader("Content-Disposition", "attachment; filename=games_export.xml");
+        res.setHeader("Content-Disposition", "inline; filename=games_export.xml");
         res.send(xml);
         
     } catch (err) {
@@ -803,7 +803,7 @@ app.get("/api/admin/xml/payments", async (req, res) => {
         xml += '</payments>';
         
         res.setHeader("Content-Type", "application/xml");
-        res.setHeader("Content-Disposition", "attachment; filename=payments_export.xml");
+        res.setHeader("Content-Disposition", "inline; filename=payments_export.xml");
         res.send(xml);
         
     } catch (err) {
