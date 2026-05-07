@@ -605,7 +605,8 @@
     let currentOrderId = null;
     let currentOrderGames = [];
     let selectedPaymentMethod = null;
-    const serverUrl = "http://localhost:3000";
+    // ✅ UPDATED: Railway URL
+    const serverUrl = "https://navigatr-production.up.railway.app";
     
     const paymentMethods = {
         gcash: { name: "GCash", number: "0912 345 6789", account: "NAVIGATR Games", qr: true },
@@ -1025,7 +1026,7 @@
             }
             let html = '<table class="admin-table"><thead><tr>';
             html += '<th>Order ID</th><th>User</th><th>Game Name(s)</th><th>Status</th><th>Date</th>';
-            html += '</tr></thead><tbody>';
+            html += '<tr></thead><tbody>';
             orders.forEach(order => {
                 let statusColor = order.status === 'paid' ? '#00a86b' : '#e94560';
                 html += `<tr>
@@ -1059,7 +1060,7 @@
             }
             let html = '<table class="admin-table"><thead><tr>';
             html += '<th>Payment ID</th><th>Order ID</th><th>User</th><th>Amount</th><th>Payment Method</th><th>Status</th><th>Transaction ID</th><th>Date</th>';
-            html += '</tr></thead><tbody>';
+            html += '</table></thead><tbody>';
             payments.forEach(p => {
                 html += `<tr>
                     <td>${p.payment_id}</td>
@@ -1087,7 +1088,7 @@
             const games = await res.json();
             let html = '<table class="admin-table"><thead><tr>';
             html += '<th>ID</th><th>Name</th><th>Category</th><th>Price</th><th>Action</th>';
-            html += '</tr></thead><tbody>';
+            html += '<td></thead><tbody>';
             games.forEach(game => {
                 html += `<tr>
                     <td>${game.id}</td>
@@ -1114,7 +1115,7 @@
                 document.getElementById('usersTable').innerHTML = `<p style="color:red;">${users.error}</p>`;
                 return;
             }
-            let html = '<table class="admin-table"><thead><tr>';
+            let html = '<table class="admin-table"><thead>EDMFunc';
             html += '<th>ID</th><th>Username</th><th>Type</th><th>Created At</th>';
             html += '</tr></thead><tbody>';
             users.forEach(user => {
