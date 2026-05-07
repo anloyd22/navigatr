@@ -40,12 +40,6 @@
                     tr:hover {
                         background: #3a3a4e;
                     }
-                    .game-image {
-                        width: 50px;
-                        height: 50px;
-                        object-fit: cover;
-                        border-radius: 8px;
-                    }
                     .footer {
                         margin-top: 20px;
                         text-align: center;
