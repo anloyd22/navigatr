@@ -570,6 +570,7 @@
                     <input type="text" id="newGameDesc" placeholder="Description">
                     <input type="text" id="newGameLink" placeholder="Download Link">
                     <input type="number" id="newGamePrice" placeholder="Price">
+                    <input type="text" id="newGameImage" placeholder="Image URL (optional)">
                     <button onclick="addNewGame()">➕ Add Game</button>
                 </div>
                 <h3>Existing Games</h3>
@@ -605,7 +606,6 @@
     let currentOrderId = null;
     let currentOrderGames = [];
     let selectedPaymentMethod = null;
-    // ✅ UPDATED: Railway URL
     const serverUrl = "https://navigatr-production.up.railway.app";
     
     const paymentMethods = {
@@ -1060,7 +1060,7 @@
             }
             let html = '<table class="admin-table"><thead><tr>';
             html += '<th>Payment ID</th><th>Order ID</th><th>User</th><th>Amount</th><th>Payment Method</th><th>Status</th><th>Transaction ID</th><th>Date</th>';
-            html += '</table></thead><tbody>';
+            html += '<tr></thead><tbody>';
             payments.forEach(p => {
                 html += `<tr>
                     <td>${p.payment_id}</td>
@@ -1087,14 +1087,15 @@
             const res = await fetch(`${serverUrl}/games`);
             const games = await res.json();
             let html = '<table class="admin-table"><thead><tr>';
-            html += '<th>ID</th><th>Name</th><th>Category</th><th>Price</th><th>Action</th>';
-            html += '<td></thead><tbody>';
+            html += '<th>ID</th><th>Name</th><th>Category</th><th>Price</th><th>Image</th><th>Action</th>';
+            html += '</tr></thead><tbody>';
             games.forEach(game => {
                 html += `<tr>
                     <td>${game.id}</td>
                     <td>${game.name}</td>
                     <td>${game.category}</td>
                     <td>₱${game.price || 0}</td>
+                    <td>${game.image_url ? '<span style="color:#00a86b">✅ Has Image</span>' : '❌ No Image'}</td>
                     <td><button class="delete-btn" onclick="deleteGame(${game.id})">Delete</button></td>
                 </tr>`;
             });
@@ -1115,13 +1116,13 @@
                 document.getElementById('usersTable').innerHTML = `<p style="color:red;">${users.error}</p>`;
                 return;
             }
-            let html = '<table class="admin-table"><thead>EDMFunc';
+            let html = '<table class="admin-table"><thead><tr>';
             html += '<th>ID</th><th>Username</th><th>Type</th><th>Created At</th>';
             html += '</tr></thead><tbody>';
             users.forEach(user => {
                 html += `<tr>
                     <td>${user.id}</td>
-                    <td>${user.username}</td>
+                    <td>${user.username}<table>
                     <td>${user.is_admin === 1 ? '<span style="color:#e94560">👑 Admin</span>' : '👤 User'}</td>
                     <td>${user.created_at || '-'}</td>
                 </tr>`;
@@ -1140,11 +1141,16 @@
         const desc = document.getElementById('newGameDesc').value;
         const link = document.getElementById('newGameLink').value;
         const price = document.getElementById('newGamePrice').value;
+        const image_url = document.getElementById('newGameImage').value;
         if (!name) { alert('Enter game name'); return; }
         await fetch(`${serverUrl}/games`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, category, description: desc, download_link: link, price: parseFloat(price) || 0 })
+            body: JSON.stringify({ 
+                name, category, description: desc, 
+                download_link: link, price: parseFloat(price) || 0,
+                image_url: image_url
+            })
         });
         alert('Game added!');
         loadAdminGames();
