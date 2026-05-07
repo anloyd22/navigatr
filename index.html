@@ -437,8 +437,11 @@
             background: #00a86b !important;
             margin-right: 10px;
         }
-        .export-btn:hover {
-            background: #008a55 !important;
+        .export-csv-btn {
+            background: #00a86b !important;
+        }
+        .export-xml-btn {
+            background: #e94560 !important;
         }
         .btn-group {
             margin-bottom: 20px;
@@ -568,21 +571,24 @@
             <div id="adminOrders" class="admin-section" style="display:none;">
                 <h2>All Orders</h2>
                 <div class="btn-group">
-                    <button class="export-btn" onclick="exportOrdersCSV()">📥 Export Orders to CSV</button>
+                    <button class="export-btn export-csv-btn" onclick="exportOrdersCSV()">📥 Export Orders to CSV</button>
+                    <button class="export-btn export-xml-btn" onclick="exportOrdersXML()">📄 Export Orders to XML</button>
                 </div>
                 <div class="admin-table-container" id="ordersTable">Loading orders...</div>
             </div>
             <div id="adminPayments" class="admin-section" style="display:none;">
                 <h2>All Payments</h2>
                 <div class="btn-group">
-                    <button class="export-btn" onclick="exportPaymentsCSV()">📥 Export Payments to CSV</button>
+                    <button class="export-btn export-csv-btn" onclick="exportPaymentsCSV()">📥 Export Payments to CSV</button>
+                    <button class="export-btn export-xml-btn" onclick="exportPaymentsXML()">📄 Export Payments to XML</button>
                 </div>
                 <div class="admin-table-container" id="paymentsTable">Loading payments...</div>
             </div>
             <div id="adminGames" class="admin-section" style="display:none;">
                 <h2>Manage Games</h2>
                 <div class="btn-group">
-                    <button class="export-btn" onclick="exportGamesCSV()">📥 Export Games to CSV</button>
+                    <button class="export-btn export-csv-btn" onclick="exportGamesCSV()">📥 Export Games to CSV</button>
+                    <button class="export-btn export-xml-btn" onclick="exportGamesXML()">📄 Export Games to XML</button>
                 </div>
                 <h3>Add New Game</h3>
                 <div class="add-game-form">
@@ -603,7 +609,7 @@
             <div id="adminUsers" class="admin-section" style="display:none;">
                 <h2>All Users</h2>
                 <div class="btn-group">
-                    <button class="export-btn" onclick="exportUsersCSV()">📥 Export Users to CSV</button>
+                    <button class="export-btn export-csv-btn" onclick="exportUsersCSV()">📥 Export Users to CSV</button>
                 </div>
                 <div class="admin-table-container" id="usersTable">Loading users...</div>
             </div>
@@ -1038,6 +1044,19 @@
         window.open(`${serverUrl}/api/admin/export/users?admin_id=${currentUser.id}`, '_blank');
     }
     
+    // XML Export Functions
+    async function exportOrdersXML() {
+        window.open(`${serverUrl}/api/admin/xml/orders?admin_id=${currentUser.id}`, '_blank');
+    }
+    
+    async function exportGamesXML() {
+        window.open(`${serverUrl}/api/admin/xml/games?admin_id=${currentUser.id}`, '_blank');
+    }
+    
+    async function exportPaymentsXML() {
+        window.open(`${serverUrl}/api/admin/xml/payments?admin_id=${currentUser.id}`, '_blank');
+    }
+    
     async function loadAdminStats() {
         if (!currentUser) return;
         try {
@@ -1104,7 +1123,7 @@
             }
             let html = '<table class="admin-table"><thead><tr>';
             html += '<th>Payment ID</th><th>Order ID</th><th>User</th><th>Amount</th><th>Payment Method</th><th>Status</th><th>Transaction ID</th><th>Date</th>';
-            html += '<tr></thead><tbody>';
+            html += '</tr></thead><tbody>';
             payments.forEach(p => {
                 html += `<tr>
                     <td>${p.payment_id}</td>
@@ -1115,9 +1134,9 @@
                     <td><span style="color: #00a86b">${p.payment_status}</span></td>
                     <td><small>${p.transaction_id || '-'}</small></td>
                     <td>${p.payment_date}</td>
-                </tr>`;
+                <tr>`;
             });
-            html += '</tbody></table>';
+            html += '</tbody></tr>';
             document.getElementById('paymentsTable').innerHTML = html;
         } catch (error) {
             console.error('Payments error:', error);
@@ -1132,7 +1151,7 @@
             const games = await res.json();
             let html = '<table class="admin-table"><thead><tr>';
             html += '<th>ID</th><th>Name</th><th>Category</th><th>Price</th><th>Image</th><th>Action</th>';
-            html += '<tr></thead><tbody>';
+            html += '</tr></thead><tbody>';
             games.forEach(game => {
                 html += `<tr>
                     <td>${game.id}</td>
@@ -1167,11 +1186,11 @@
                 html += `<tr>
                     <td>${user.id}</td>
                     <td>${user.username}</td>
-                    <td>${user.is_admin === 1 ? '<span style="color:#e94560">👑 Admin</span>' : '👤 User'}<tr>
+                    <td>${user.is_admin === 1 ? '<span style="color:#e94560">👑 Admin</span>' : '👤 User'}</td>
                     <td>${user.created_at || '-'}</td>
                 </tr>`;
             });
-            html += '</tbody></table>';
+            html += '</tbody></tr>';
             document.getElementById('usersTable').innerHTML = html;
         } catch (error) {
             console.error('Users error:', error);
