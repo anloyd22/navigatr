@@ -645,7 +645,58 @@ app.get("/api/admin/export/users", async (req, res) => {
     }
 });
 
-// ================ XML EXPORT ================
+// ================ TEST XML ROUTES ================
+
+// Simple test XML
+app.get("/api/test/xml", async (req, res) => {
+    try {
+        let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+        xml += '<test>\n';
+        xml += '  <message>Hello World from NAVIGATR!</message>\n';
+        xml += '</test>';
+        
+        res.setHeader("Content-Type", "application/xml");
+        res.send(xml);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Raw games data
+app.get("/api/raw/games", async (req, res) => {
+    try {
+        const result = await db.query("SELECT id, name, category, price FROM games LIMIT 10");
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Simple games XML (no XSL)
+app.get("/api/simple/games-xml", async (req, res) => {
+    try {
+        const result = await db.query("SELECT id, name, category, price FROM games ORDER BY name");
+        
+        let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+        xml += '<games>\n';
+        
+        for (const game of result.rows) {
+            xml += '  <game>\n';
+            xml += `    <id>${game.id}</id>\n`;
+            xml += `    <name>${escapeXml(String(game.name))}</name>\n`;
+            xml += `    <category>${escapeXml(String(game.category))}</category>\n`;
+            xml += `    <price>${game.price}</price>\n`;
+            xml += '  </game>\n';
+        }
+        
+        xml += '</games>';
+        
+        res.setHeader("Content-Type", "application/xml");
+        res.send(xml);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // Helper function to escape XML special characters
 function escapeXml(str) {
@@ -661,167 +712,6 @@ function escapeXml(str) {
         }
     });
 }
-
-// Export games to XML
-app.get("/api/admin/xml/games", async (req, res) => {
-    const { admin_id } = req.query;
-    
-    try {
-        const adminCheck = await db.query("SELECT is_admin FROM users WHERE id = $1", [admin_id]);
-        if (adminCheck.rows.length === 0 || adminCheck.rows[0].is_admin !== 1) {
-            res.status(403).json({ error: "Access denied. Admin only." });
-            return;
-        }
-        
-        const result = await db.query("SELECT id, name, category, description, price, created_at FROM games ORDER BY name");
-        
-        let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
-        xml += '<?xml-stylesheet type="text/xsl" href="/games.xsl"?>\n';
-        xml += '<games>\n';
-        
-        for (const game of result.rows) {
-            xml += '  <game>\n';
-            xml += `    <id>${game.id}</id>\n`;
-            xml += `    <name>${escapeXml(String(game.name))}</name>\n`;
-            xml += `    <category>${escapeXml(String(game.category))}</category>\n`;
-            xml += `    <description>${escapeXml(String(game.description || '-'))}</description>\n`;
-            xml += `    <price>${game.price}</price>\n`;
-            xml += `    <created_at>${game.created_at}</created_at>\n`;
-            xml += '  </game>\n';
-        }
-        
-        xml += '</games>';
-        
-        res.setHeader("Content-Type", "application/xml");
-        res.setHeader("Content-Disposition", "inline; filename=games_export.xml");
-        res.send(xml);
-        
-    } catch (err) {
-        console.error("XML Error:", err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Export orders to XML
-app.get("/api/admin/xml/orders", async (req, res) => {
-    const { admin_id } = req.query;
-    
-    try {
-        const adminCheck = await db.query("SELECT is_admin FROM users WHERE id = $1", [admin_id]);
-        if (adminCheck.rows.length === 0 || adminCheck.rows[0].is_admin !== 1) {
-            res.status(403).json({ error: "Access denied. Admin only." });
-            return;
-        }
-        
-        const result = await db.query(`
-            SELECT 
-                o.order_id, 
-                u.username, 
-                o.total_amount, 
-                o.status, 
-                o.payment_method,
-                o.order_date,
-                STRING_AGG(g.name, ', ') as game_names
-            FROM orders o
-            JOIN users u ON o.user_id = u.id
-            LEFT JOIN order_items oi ON o.order_id = oi.order_id
-            LEFT JOIN games g ON oi.game_id = g.id
-            GROUP BY o.order_id, u.username, o.total_amount, o.status, o.payment_method, o.order_date
-            ORDER BY o.order_date DESC
-        `);
-        
-        let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
-        xml += '<?xml-stylesheet type="text/xsl" href="/orders.xsl"?>\n';
-        xml += '<orders>\n';
-        
-        for (const order of result.rows) {
-            xml += '  <order>\n';
-            xml += `    <order_id>${order.order_id}</order_id>\n`;
-            xml += `    <username>${escapeXml(order.username)}</username>\n`;
-            xml += `    <game_names>${escapeXml(order.game_names || '-')}</game_names>\n`;
-            xml += `    <total_amount>${order.total_amount}</total_amount>\n`;
-            xml += `    <status>${order.status}</status>\n`;
-            xml += `    <payment_method>${order.payment_method || '-'}</payment_method>\n`;
-            xml += `    <order_date>${order.order_date}</order_date>\n`;
-            xml += '  </order>\n';
-        }
-        
-        xml += '</orders>';
-        
-        res.setHeader("Content-Type", "application/xml");
-        res.setHeader("Content-Disposition", "inline; filename=orders_export.xml");
-        res.send(xml);
-        
-    } catch (err) {
-        console.error("XML Error:", err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Export payments to XML
-app.get("/api/admin/xml/payments", async (req, res) => {
-    const { admin_id } = req.query;
-    
-    try {
-        const adminCheck = await db.query("SELECT is_admin FROM users WHERE id = $1", [admin_id]);
-        if (adminCheck.rows.length === 0 || adminCheck.rows[0].is_admin !== 1) {
-            res.status(403).json({ error: "Access denied. Admin only." });
-            return;
-        }
-        
-        const result = await db.query(`
-            SELECT 
-                p.payment_id,
-                p.order_id,
-                u.username,
-                p.amount,
-                p.payment_method,
-                p.payment_status,
-                p.transaction_id,
-                p.payment_date
-            FROM payments p
-            JOIN users u ON p.user_id = u.id
-            ORDER BY p.payment_date DESC
-        `);
-        
-        let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
-        xml += '<?xml-stylesheet type="text/xsl" href="/payments.xsl"?>\n';
-        xml += '<payments>\n';
-        
-        for (const payment of result.rows) {
-            xml += '  <payment>\n';
-            xml += `    <payment_id>${payment.payment_id}</payment_id>\n`;
-            xml += `    <order_id>${payment.order_id}</order_id>\n`;
-            xml += `    <username>${escapeXml(payment.username)}</username>\n`;
-            xml += `    <amount>${payment.amount}</amount>\n`;
-            xml += `    <payment_method>${payment.payment_method}</payment_method>\n`;
-            xml += `    <payment_status>${payment.payment_status}</payment_status>\n`;
-            xml += `    <transaction_id>${payment.transaction_id || '-'}</transaction_id>\n`;
-            xml += `    <payment_date>${payment.payment_date}</payment_date>\n`;
-            xml += '  <\/payment>\n';
-        }
-        
-        xml += '</payments>';
-        
-        res.setHeader("Content-Type", "application/xml");
-        res.setHeader("Content-Disposition", "inline; filename=payments_export.xml");
-        res.send(xml);
-        
-    } catch (err) {
-        console.error("XML Error:", err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// ================ DEBUG ================
-app.get("/api/debug/xml", async (req, res) => {
-    try {
-        const result = await db.query("SELECT id, name FROM games LIMIT 3");
-        res.json({ success: true, games: result.rows });
-    } catch (err) {
-        res.json({ success: false, error: err.message });
-    }
-});
 
 // ================ START SERVER ================
 const PORT = process.env.PORT || 3000;
