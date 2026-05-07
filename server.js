@@ -1,50 +1,62 @@
 const express = require("express");
 const cors = require("cors");
-const sqlite3 = require("sqlite3").verbose();
+const { Pool } = require('pg');
 const bcrypt = require("bcrypt");
 
 const app = express();
 const saltRounds = 10;
 
 app.use(cors({
-    origin: ["http://localhost:5500", "http://127.0.0.1:5500", "http://localhost:3000"],
+    origin: ["http://localhost:5500", "http://127.0.0.1:5500", "https://*.railway.app"],
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type"]
 }));
 app.use(express.json());
 
-const db = new sqlite3.Database("./navigatr.db");
+// PostgreSQL connection
+const db = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+});
 
-db.serialize(() => {
-  db.run(`CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+// Create tables
+db.query(`
+  CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
     username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
     is_admin INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`);
 
-  db.run(`CREATE TABLE IF NOT EXISTS games (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+db.query(`
+  CREATE TABLE IF NOT EXISTS games (
+    id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     category TEXT NOT NULL,
     description TEXT,
     download_link TEXT,
     price DECIMAL(10,2) DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
+    image_url TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`);
 
-  db.run(`CREATE TABLE IF NOT EXISTS user_favorites (
+db.query(`
+  CREATE TABLE IF NOT EXISTS user_favorites (
     user_id INTEGER,
     game_id INTEGER,
-    added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (game_id) REFERENCES games(id),
     PRIMARY KEY (user_id, game_id)
-  )`);
+  )
+`);
 
-  db.run(`CREATE TABLE IF NOT EXISTS orders (
-    order_id INTEGER PRIMARY KEY AUTOINCREMENT,
+db.query(`
+  CREATE TABLE IF NOT EXISTS orders (
+    order_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL,
     total_amount DECIMAL(10,2) DEFAULT 0,
     status TEXT DEFAULT 'pending',
@@ -54,20 +66,24 @@ db.serialize(() => {
     transaction_id TEXT,
     order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
-  )`);
+  )
+`);
 
-  db.run(`CREATE TABLE IF NOT EXISTS order_items (
-    item_id INTEGER PRIMARY KEY AUTOINCREMENT,
+db.query(`
+  CREATE TABLE IF NOT EXISTS order_items (
+    item_id SERIAL PRIMARY KEY,
     order_id INTEGER NOT NULL,
     game_id INTEGER NOT NULL,
     quantity INTEGER DEFAULT 1,
     price_at_purchase DECIMAL(10,2) NOT NULL,
     FOREIGN KEY (order_id) REFERENCES orders(order_id),
     FOREIGN KEY (game_id) REFERENCES games(id)
-  )`);
+  )
+`);
 
-  db.run(`CREATE TABLE IF NOT EXISTS payments (
-    payment_id INTEGER PRIMARY KEY AUTOINCREMENT,
+db.query(`
+  CREATE TABLE IF NOT EXISTS payments (
+    payment_id SERIAL PRIMARY KEY,
     order_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
     amount DECIMAL(10,2) NOT NULL,
@@ -77,114 +93,57 @@ db.serialize(() => {
     payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders(order_id),
     FOREIGN KEY (user_id) REFERENCES users(id)
-  )`);
+  )
+`);
 
-  db.run(`CREATE TABLE IF NOT EXISTS admin_logs (
-    log_id INTEGER PRIMARY KEY AUTOINCREMENT,
+db.query(`
+  CREATE TABLE IF NOT EXISTS admin_logs (
+    log_id SERIAL PRIMARY KEY,
     admin_id INTEGER NOT NULL,
     action_type TEXT NOT NULL,
     target_id INTEGER,
     details TEXT,
     log_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (admin_id) REFERENCES users(id)
-  )`);
-  
-  db.get("SELECT COUNT(*) as count FROM games", (err, row) => {
-    if (err) {
-      console.error(err);
-      return;
-    }
-    
-    if (row.count === 0) {
-      const sampleGames = [
-        ["Call of Duty MW3", "Action", "Military FPS combat.", "https://www.callofduty.com/", 599],
-        ["God of War", "Action", "Kratos vs gods.", "https://store.playstation.com/", 699],
-        ["Spider-Man", "Action", "Hero action.", "https://store.playstation.com/", 649],
-        ["Devil May Cry 5", "Action", "Stylish combat.", "https://store.steampowered.com/app/601150/", 499],
-        ["Sekiro", "Action", "Samurai revenge.", "https://store.steampowered.com/app/814380/", 699],
-        ["Assassin Creed Mirage", "Action", "Stealth action.", "https://www.ubisoft.com/", 599],
-        ["Batman Arkham Knight", "Action", "Be Batman.", "https://store.steampowered.com/app/208650/", 399],
-        ["Ghost of Tsushima", "Action", "Samurai world.", "https://store.playstation.com/", 699],
-        ["Far Cry 6", "Action", "Revolution shooter.", "https://www.ubisoft.com/", 549],
-        ["Watch Dogs 2", "Action", "Hacker world.", "https://www.ubisoft.com/", 449],
-        ["Need for Speed", "Racing", "Street racing.", "https://www.ea.com/", 549],
-        ["Forza Horizon 5", "Racing", "Open world racing.", "https://store.steampowered.com/app/1551360/", 699],
-        ["Gran Turismo 7", "Racing", "Real racing sim.", "https://store.playstation.com/", 699],
-        ["F1 23", "Racing", "Formula racing.", "https://store.steampowered.com/app/2108330/", 599],
-        ["Dirt 5", "Racing", "Off-road racing.", "https://store.steampowered.com/app/1038250/", 499],
-        ["GTA V", "Open World", "Crime sandbox.", "https://store.steampowered.com/app/271590/", 699],
-        ["Red Dead Redemption 2", "Open World", "Wild West story.", "https://store.steampowered.com/app/1174180/", 699],
-        ["Cyberpunk 2077", "Open World", "Future RPG.", "https://store.steampowered.com/app/1091500/", 699],
-        ["Minecraft", "Open World", "Sandbox survival.", "https://www.minecraft.net/", 499],
-        ["Skyrim", "Open World", "Fantasy RPG world.", "https://store.steampowered.com/app/489830/", 399],
-        ["Valorant", "FPS", "Tactical shooter.", "https://playvalorant.com/", 0],
-        ["CSGO", "FPS", "Competitive FPS.", "https://store.steampowered.com/app/730/", 0],
-        ["Overwatch 2", "FPS", "Hero shooter.", "https://overwatch.blizzard.com/", 0],
-        ["Apex Legends", "FPS", "Battle royale FPS.", "https://store.steampowered.com/app/1172470/", 0],
-        ["DOOM Eternal", "FPS", "Fast FPS combat.", "https://store.steampowered.com/app/782330/", 699],
-        ["Elden Ring", "RPG", "Hard RPG.", "https://store.steampowered.com/app/1245620/", 699],
-        ["The Witcher 3", "RPG", "Monster hunting.", "https://store.steampowered.com/app/292030/", 399],
-        ["Dark Souls 3", "RPG", "Hard combat.", "https://store.steampowered.com/app/374320/", 699],
-        ["Persona 5", "RPG", "School RPG.", "https://store.steampowered.com/", 499],
-        ["Uncharted 4", "Adventure", "Treasure hunt.", "https://store.steampowered.com/app/1659420/", 599],
-        ["Tomb Raider", "Adventure", "Explorer.", "https://store.steampowered.com/app/203160/", 399],
-        ["The Last of Us", "Adventure", "Survival story.", "https://store.steampowered.com/", 699],
-        ["Stray", "Adventure", "Play as cat.", "https://store.steampowered.com/app/1332010/", 499],
-        ["Resident Evil 4", "Horror", "Zombie horror.", "https://store.steampowered.com/app/2050650/", 699],
-        ["Outlast", "Horror", "Asylum horror.", "https://store.steampowered.com/app/238320/", 399],
-        ["Phasmophobia", "Horror", "Ghost hunting.", "https://store.steampowered.com/app/739630/", 349],
-        ["Dead Space", "Horror", "Space horror.", "https://store.steampowered.com/app/1693980/", 699]
-      ];
-
-      const insertStmt = db.prepare("INSERT INTO games (name, category, description, download_link, price) VALUES (?, ?, ?, ?, ?)");
-      sampleGames.forEach(game => insertStmt.run(game));
-      insertStmt.finalize();
-      console.log("✅ Sample games inserted into database!");
-    }
-  });
-  
-  console.log("✅ Database tables ready");
-});
+  )
+`);
 
 // ================ GAMES API ================
 
-app.get("/games", (req, res) => {
-  db.all("SELECT * FROM games ORDER BY name", (err, rows) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    res.json(rows);
-  });
+app.get("/games", async (req, res) => {
+  try {
+    const result = await db.query("SELECT * FROM games ORDER BY name");
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.get("/games/category/:category", (req, res) => {
+app.get("/games/category/:category", async (req, res) => {
   const { category } = req.params;
-  db.all("SELECT * FROM games WHERE category = ? ORDER BY name", [category], (err, rows) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    res.json(rows);
-  });
+  try {
+    const result = await db.query("SELECT * FROM games WHERE category = $1 ORDER BY name", [category]);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.get("/games/:id", (req, res) => {
+app.get("/games/:id", async (req, res) => {
   const { id } = req.params;
-  db.get("SELECT * FROM games WHERE id = ?", [id], (err, row) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    if (!row) {
+  try {
+    const result = await db.query("SELECT * FROM games WHERE id = $1", [id]);
+    if (result.rows.length === 0) {
       res.status(404).json({ error: "Game not found" });
       return;
     }
-    res.json(row);
-  });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.post("/games", (req, res) => {
+app.post("/games", async (req, res) => {
   const { name, category, description, download_link, price } = req.body;
   
   console.log("📌 [ADD GAME] Name:", name, "| Category:", category, "| Price: ₱" + price);
@@ -194,62 +153,54 @@ app.post("/games", (req, res) => {
     return;
   }
   
-  db.run("INSERT INTO games (name, category, description, download_link, price) VALUES (?, ?, ?, ?, ?)",
-    [name, category, description || "", download_link || "", price || 0],
-    function(err) {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      console.log("✅ [ADD GAME] Success! ID:", this.lastID, "-", name);
-      res.json({ id: this.lastID, message: "Game added successfully!" });
-    }
-  );
+  try {
+    const result = await db.query(
+      "INSERT INTO games (name, category, description, download_link, price) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+      [name, category, description || "", download_link || "", price || 0]
+    );
+    console.log("✅ [ADD GAME] Success! ID:", result.rows[0].id, "-", name);
+    res.json({ id: result.rows[0].id, message: "Game added successfully!" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.delete("/games/:id", (req, res) => {
+app.delete("/games/:id", async (req, res) => {
   const { id } = req.params;
   
   console.log("📌 [DELETE GAME] Attempting to delete ID:", id);
   
-  db.run("DELETE FROM games WHERE id = ?", [id], function(err) {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    if (this.changes === 0) {
+  try {
+    const result = await db.query("DELETE FROM games WHERE id = $1", [id]);
+    if (result.rowCount === 0) {
       res.status(404).json({ error: "Game not found" });
       return;
     }
     console.log("✅ [DELETE GAME] Success! ID:", id, "deleted");
     res.json({ message: "Game deleted successfully!" });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.put("/games/:id", (req, res) => {
+app.put("/games/:id", async (req, res) => {
   const { id } = req.params;
   const { name, category, description, download_link, price } = req.body;
   
-  db.run("UPDATE games SET name = ?, category = ?, description = ?, download_link = ?, price = ? WHERE id = ?",
-    [name, category, description, download_link, price, id],
-    function(err) {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      if (this.changes === 0) {
-        res.status(404).json({ error: "Game not found" });
-        return;
-      }
-      res.json({ message: "Game updated successfully!" });
-    }
-  );
+  try {
+    await db.query(
+      "UPDATE games SET name = $1, category = $2, description = $3, download_link = $4, price = $5 WHERE id = $6",
+      [name, category, description, download_link, price, id]
+    );
+    res.json({ message: "Game updated successfully!" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// ================ USER AUTHENTICATION API (WITH BCRYPT HASHING) ================
+// ================ USER AUTHENTICATION API ================
 
-// User signup - with password hashing
-app.post("/api/signup", (req, res) => {
+app.post("/api/signup", async (req, res) => {
   const { username, password } = req.body;
   
   console.log("📌 [SIGNUP] Attempt:", username);
@@ -259,117 +210,92 @@ app.post("/api/signup", (req, res) => {
     return;
   }
   
-  // Hash the password before saving
-  bcrypt.hash(password, saltRounds, (err, hash) => {
-    if (err) {
-      console.log("❌ [SIGNUP] Hashing error:", err.message);
-      res.status(500).json({ error: "Error processing password" });
-      return;
-    }
-    
-    db.run("INSERT INTO users (username, password, is_admin) VALUES (?, ?, 0)", 
-      [username, hash], 
-      function(err) {
-        if (err) {
-          console.log("❌ [SIGNUP] Error:", err.message);
-          if (err.message.includes("UNIQUE")) {
-            res.status(400).json({ error: "Username already exists" });
-          } else {
-            res.status(500).json({ error: err.message });
-          }
-          return;
-        }
-        console.log("✅ [SIGNUP] Success! User:", username, "ID:", this.lastID);
-        res.json({ id: this.lastID, username, message: "User created successfully" });
-      }
+  try {
+    const hash = await bcrypt.hash(password, saltRounds);
+    const result = await db.query(
+      "INSERT INTO users (username, password, is_admin) VALUES ($1, $2, 0) RETURNING id",
+      [username, hash]
     );
-  });
+    console.log("✅ [SIGNUP] Success! User:", username, "ID:", result.rows[0].id);
+    res.json({ id: result.rows[0].id, username, message: "User created successfully" });
+  } catch (err) {
+    if (err.message.includes("duplicate") || err.message.includes("UNIQUE")) {
+      res.status(400).json({ error: "Username already exists" });
+    } else {
+      res.status(500).json({ error: err.message });
+    }
+  }
 });
 
-// User login - with password comparison
-app.post("/api/login", (req, res) => {
+app.post("/api/login", async (req, res) => {
   const { username, password } = req.body;
   
   console.log("📌 [LOGIN] Attempt:", username);
   
-  if (!username || !password) {
-    res.status(400).json({ error: "Username and password required" });
-    return;
-  }
-  
-  // First get the user by username
-  db.get("SELECT * FROM users WHERE username = ?", [username], (err, row) => {
-    if (err) {
-      console.log("❌ [LOGIN] Error:", err.message);
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    if (!row) {
+  try {
+    const result = await db.query("SELECT * FROM users WHERE username = $1", [username]);
+    
+    if (result.rows.length === 0) {
       console.log("❌ [LOGIN] Failed: User not found -", username);
       res.status(401).json({ error: "Invalid username or password" });
       return;
     }
     
-    // Compare the provided password with the stored hash
-    bcrypt.compare(password, row.password, (err, result) => {
-      if (err) {
-        console.log("❌ [LOGIN] Compare error:", err.message);
-        res.status(500).json({ error: "Error verifying password" });
-        return;
-      }
-      
-      if (!result) {
-        console.log("❌ [LOGIN] Failed: Invalid password for", username);
-        res.status(401).json({ error: "Invalid username or password" });
-        return;
-      }
-      
-      console.log("✅ [LOGIN] Success:", username, "| is_admin:", row.is_admin);
-      res.json({ 
-        id: row.id, 
-        username: row.username, 
-        is_admin: row.is_admin === 1,
-        message: "Login successful" 
-      });
-    });
-  });
-});
-
-app.post("/api/favorites", (req, res) => {
-  const { user_id, game_id } = req.body;
-  
-  db.run("INSERT OR IGNORE INTO user_favorites (user_id, game_id) VALUES (?, ?)", 
-    [user_id, game_id], 
-    function(err) {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      res.json({ message: "Added to favorites" });
-    }
-  );
-});
-
-app.get("/api/favorites/:user_id", (req, res) => {
-  const { user_id } = req.params;
-  
-  db.all(`
-    SELECT g.* FROM games g
-    JOIN user_favorites uf ON g.id = uf.game_id
-    WHERE uf.user_id = ?
-    ORDER BY g.name
-  `, [user_id], (err, rows) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
+    const user = result.rows[0];
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    
+    if (!passwordMatch) {
+      console.log("❌ [LOGIN] Failed: Invalid password for", username);
+      res.status(401).json({ error: "Invalid username or password" });
       return;
     }
-    res.json(rows);
-  });
+    
+    console.log("✅ [LOGIN] Success:", username, "| is_admin:", user.is_admin);
+    res.json({ 
+      id: user.id, 
+      username: user.username, 
+      is_admin: user.is_admin === 1,
+      message: "Login successful" 
+    });
+  } catch (err) {
+    console.log("❌ [LOGIN] Error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/favorites", async (req, res) => {
+  const { user_id, game_id } = req.body;
+  
+  try {
+    await db.query(
+      "INSERT OR IGNORE INTO user_favorites (user_id, game_id) VALUES ($1, $2)",
+      [user_id, game_id]
+    );
+    res.json({ message: "Added to favorites" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/favorites/:user_id", async (req, res) => {
+  const { user_id } = req.params;
+  
+  try {
+    const result = await db.query(`
+      SELECT g.* FROM games g
+      JOIN user_favorites uf ON g.id = uf.game_id
+      WHERE uf.user_id = $1
+      ORDER BY g.name
+    `, [user_id]);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ================ ORDER AND PAYMENT API ================
 
-app.post("/api/orders/create", (req, res) => {
+app.post("/api/orders/create", async (req, res) => {
   const { user_id, items, total_amount, shipping_address } = req.body;
   
   console.log("========================================");
@@ -377,36 +303,31 @@ app.post("/api/orders/create", (req, res) => {
   console.log("📦 Items:", items.length);
   console.log("💰 Total Amount: ₱" + total_amount);
   
-  if (!user_id || !items || items.length === 0) {
-    res.status(400).json({ error: "User ID and items are required" });
-    return;
-  }
-  
-  db.run(`INSERT INTO orders (user_id, total_amount, status, shipping_address, payment_status) 
-          VALUES (?, ?, 'pending', ?, 'pending')`, 
-          [user_id, total_amount, shipping_address || ""], 
-          function(err) {
-    if (err) {
-      res.json({ success: false, error: err.message });
-      return;
-    }
+  try {
+    const orderResult = await db.query(
+      "INSERT INTO orders (user_id, total_amount, status, shipping_address, payment_status) VALUES ($1, $2, 'pending', $3, 'pending') RETURNING order_id",
+      [user_id, total_amount, shipping_address || ""]
+    );
     
-    const order_id = this.lastID;
+    const order_id = orderResult.rows[0].order_id;
     console.log("✅ [NEW ORDER] Order created! ID:", order_id);
     
-    items.forEach(item => {
-      db.run(`INSERT INTO order_items (order_id, game_id, quantity, price_at_purchase) 
-              VALUES (?, ?, ?, ?)`, 
-              [order_id, item.game_id, item.quantity, item.price]);
-    });
+    for (const item of items) {
+      await db.query(
+        "INSERT INTO order_items (order_id, game_id, quantity, price_at_purchase) VALUES ($1, $2, $3, $4)",
+        [order_id, item.game_id, item.quantity, item.price]
+      );
+    }
     
     res.json({ success: true, order_id: order_id });
-  });
+  } catch (err) {
+    console.log("❌ [NEW ORDER] Error:", err.message);
+    res.json({ success: false, error: err.message });
+  }
 });
 
-app.post("/api/payment/gcash", (req, res) => {
+app.post("/api/payment/gcash", async (req, res) => {
   const { order_id, user_id, amount } = req.body;
-  
   const transaction_id = "SIM-GCASH-" + Date.now();
   
   console.log("========================================");
@@ -415,203 +336,182 @@ app.post("/api/payment/gcash", (req, res) => {
   console.log("💰 Amount: ₱" + amount);
   console.log("🆔 Transaction ID:", transaction_id);
   
-  db.run(`INSERT INTO payments (order_id, user_id, amount, payment_method, payment_status, transaction_id) 
-          VALUES (?, ?, ?, 'gcash', 'completed', ?)`, 
-          [order_id, user_id, amount, transaction_id], 
-          function(err) {
-    if (err) {
-      console.log("❌ [PAYMENT] Failed:", err.message);
-      res.json({ success: false, error: err.message });
-      return;
-    }
+  try {
+    await db.query(
+      "INSERT INTO payments (order_id, user_id, amount, payment_method, payment_status, transaction_id) VALUES ($1, $2, $3, 'gcash', 'completed', $4)",
+      [order_id, user_id, amount, transaction_id]
+    );
     
-    db.run(`UPDATE orders SET status = 'paid', payment_method = 'gcash', payment_status = 'completed', transaction_id = ? WHERE order_id = ?`, 
-            [transaction_id, order_id]);
+    await db.query(
+      "UPDATE orders SET status = 'paid', payment_method = 'gcash', payment_status = 'completed', transaction_id = $1 WHERE order_id = $2",
+      [transaction_id, order_id]
+    );
     
     console.log("✅ [PAYMENT] SUCCESS! Payment recorded for Order ID:", order_id);
     console.log("========================================");
     
-    res.json({ 
-      success: true, 
-      payment_id: this.lastID,
-      transaction_id: transaction_id,
-      message: "Payment successful!"
-    });
-  });
+    res.json({ success: true, transaction_id: transaction_id, message: "Payment successful!" });
+  } catch (err) {
+    console.log("❌ [PAYMENT] Failed:", err.message);
+    res.json({ success: false, error: err.message });
+  }
 });
 
-app.get("/api/orders/:order_id", (req, res) => {
+app.get("/api/orders/:order_id", async (req, res) => {
   const { order_id } = req.params;
   
-  db.get(`SELECT o.*, u.username 
-          FROM orders o
-          JOIN users u ON o.user_id = u.id
-          WHERE o.order_id = ?`, 
-          [order_id], 
-          (err, order) => {
-    if (err) {
-      res.json({ success: false, error: err.message });
-      return;
-    }
+  try {
+    const orderResult = await db.query(
+      "SELECT o.*, u.username FROM orders o JOIN users u ON o.user_id = u.id WHERE o.order_id = $1",
+      [order_id]
+    );
     
-    db.all(`SELECT oi.*, g.name as game_name 
-            FROM order_items oi
-            JOIN games g ON oi.game_id = g.id
-            WHERE oi.order_id = ?`, 
-            [order_id], 
-            (err, items) => {
-      res.json({ success: true, order: order, items: items });
-    });
-  });
+    const itemsResult = await db.query(
+      "SELECT oi.*, g.name as game_name FROM order_items oi JOIN games g ON oi.game_id = g.id WHERE oi.order_id = $1",
+      [order_id]
+    );
+    
+    res.json({ success: true, order: orderResult.rows[0], items: itemsResult.rows });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
 });
 
-app.get("/api/payments/order/:order_id", (req, res) => {
+app.get("/api/payments/order/:order_id", async (req, res) => {
   const { order_id } = req.params;
   
-  db.get(`SELECT * FROM payments WHERE order_id = ?`, 
-          [order_id], 
-          (err, payment) => {
-    res.json({ success: true, payment: payment });
-  });
+  try {
+    const result = await db.query("SELECT * FROM payments WHERE order_id = $1", [order_id]);
+    res.json({ success: true, payment: result.rows[0] });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
 });
 
 // ================ ADMIN API ================
 
-// Get all orders (admin) - Order ID, User, Game Names, Status, Date only
-app.get("/api/admin/orders", (req, res) => {
+app.get("/api/admin/orders", async (req, res) => {
   const { admin_id } = req.query;
   
-  console.log("📌 [ADMIN] Fetching orders for admin_id:", admin_id);
-  
-  db.get("SELECT is_admin FROM users WHERE id = ?", [admin_id], (err, user) => {
-    if (err) {
-      console.log("❌ [ADMIN] Error checking admin:", err.message);
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    if (!user || user.is_admin !== 1) {
-      console.log("❌ [ADMIN] Access denied for admin_id:", admin_id);
+  try {
+    const adminCheck = await db.query("SELECT is_admin FROM users WHERE id = $1", [admin_id]);
+    if (adminCheck.rows.length === 0 || adminCheck.rows[0].is_admin !== 1) {
       res.status(403).json({ error: "Access denied. Admin only." });
       return;
     }
     
-    db.all(`SELECT 
-              o.order_id, 
-              u.username, 
-              o.status, 
-              o.order_date,
-              GROUP_CONCAT(g.name, ', ') as game_names
-            FROM orders o
-            JOIN users u ON o.user_id = u.id
-            LEFT JOIN order_items oi ON o.order_id = oi.order_id
-            LEFT JOIN games g ON oi.game_id = g.id
-            GROUP BY o.order_id
-            ORDER BY o.order_date DESC`, 
-            (err, rows) => {
-      if (err) {
-        console.log("❌ [ADMIN] Error fetching orders:", err.message);
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      console.log("✅ [ADMIN] Found", rows.length, "orders");
-      res.json(rows);
-    });
-  });
+    const result = await db.query(`
+      SELECT 
+        o.order_id, 
+        u.username, 
+        o.status, 
+        o.order_date,
+        STRING_AGG(g.name, ', ') as game_names
+      FROM orders o
+      JOIN users u ON o.user_id = u.id
+      LEFT JOIN order_items oi ON o.order_id = oi.order_id
+      LEFT JOIN games g ON oi.game_id = g.id
+      GROUP BY o.order_id, u.username, o.status, o.order_date
+      ORDER BY o.order_date DESC
+    `);
+    
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// Get all payments (admin)
-app.get("/api/admin/payments", (req, res) => {
+app.get("/api/admin/payments", async (req, res) => {
   const { admin_id } = req.query;
   
-  console.log("📌 [ADMIN] Fetching payments for admin_id:", admin_id);
-  
-  db.get("SELECT is_admin FROM users WHERE id = ?", [admin_id], (err, user) => {
-    if (err || !user || user.is_admin !== 1) {
+  try {
+    const adminCheck = await db.query("SELECT is_admin FROM users WHERE id = $1", [admin_id]);
+    if (adminCheck.rows.length === 0 || adminCheck.rows[0].is_admin !== 1) {
       res.status(403).json({ error: "Access denied. Admin only." });
       return;
     }
     
-    db.all(`SELECT 
-              p.payment_id, 
-              p.order_id, 
-              u.username, 
-              p.amount, 
-              p.payment_method, 
-              p.payment_status, 
-              p.transaction_id, 
-              p.payment_date
-            FROM payments p
-            JOIN users u ON p.user_id = u.id
-            ORDER BY p.payment_date DESC`, 
-            (err, rows) => {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      console.log("✅ [ADMIN] Found", rows.length, "payments");
-      res.json(rows);
-    });
-  });
+    const result = await db.query(`
+      SELECT 
+        p.payment_id, 
+        p.order_id, 
+        u.username, 
+        p.amount, 
+        p.payment_method, 
+        p.payment_status, 
+        p.transaction_id, 
+        p.payment_date
+      FROM payments p
+      JOIN users u ON p.user_id = u.id
+      ORDER BY p.payment_date DESC
+    `);
+    
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// Get dashboard stats (admin)
-app.get("/api/admin/stats", (req, res) => {
+app.get("/api/admin/stats", async (req, res) => {
   const { admin_id } = req.query;
   
-  db.get("SELECT is_admin FROM users WHERE id = ?", [admin_id], (err, user) => {
-    if (err || !user || user.is_admin !== 1) {
+  try {
+    const adminCheck = await db.query("SELECT is_admin FROM users WHERE id = $1", [admin_id]);
+    if (adminCheck.rows.length === 0 || adminCheck.rows[0].is_admin !== 1) {
       res.status(403).json({ error: "Access denied. Admin only." });
       return;
     }
     
-    db.get(`SELECT 
-      (SELECT COUNT(*) FROM users WHERE is_admin = 0) as total_users,
-      (SELECT COUNT(*) FROM orders) as total_orders,
-      (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE payment_status = 'completed') as total_sales,
-      (SELECT COUNT(*) FROM games) as total_games`,
-      (err, stats) => {
-        res.json(stats);
-      });
-  });
+    const statsResult = await db.query(`
+      SELECT 
+        (SELECT COUNT(*) FROM users WHERE is_admin = 0) as total_users,
+        (SELECT COUNT(*) FROM orders) as total_orders,
+        (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE payment_status = 'completed') as total_sales,
+        (SELECT COUNT(*) FROM games) as total_games
+    `);
+    
+    res.json(statsResult.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// Get all users (admin)
-app.get("/api/admin/users", (req, res) => {
+app.get("/api/admin/users", async (req, res) => {
   const { admin_id } = req.query;
   
-  db.get("SELECT is_admin FROM users WHERE id = ?", [admin_id], (err, user) => {
-    if (err || !user || user.is_admin !== 1) {
+  try {
+    const adminCheck = await db.query("SELECT is_admin FROM users WHERE id = $1", [admin_id]);
+    if (adminCheck.rows.length === 0 || adminCheck.rows[0].is_admin !== 1) {
       res.status(403).json({ error: "Access denied. Admin only." });
       return;
     }
     
-    db.all("SELECT id, username, is_admin, created_at FROM users ORDER BY id", (err, rows) => {
-      res.json(rows);
-    });
-  });
+    const result = await db.query("SELECT id, username, is_admin, created_at FROM users ORDER BY id");
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.post("/api/admin/log", (req, res) => {
+app.post("/api/admin/log", async (req, res) => {
   const { admin_id, action_type, target_id, details } = req.body;
   
-  db.run(`INSERT INTO admin_logs (admin_id, action_type, target_id, details) 
-          VALUES (?, ?, ?, ?)`, 
-          [admin_id, action_type, target_id, details || ""]);
-  
-  res.json({ success: true });
+  try {
+    await db.query(
+      "INSERT INTO admin_logs (admin_id, action_type, target_id, details) VALUES ($1, $2, $3, $4)",
+      [admin_id, action_type, target_id, details || ""]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.json({ success: false });
+  }
 });
 
 // ================ START SERVER ================
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`========================================`);
   console.log(`NAVIGATR server running!`);
   console.log(`Server: http://localhost:${PORT}`);
-  console.log(`Games API: http://localhost:${PORT}/games`);
-  console.log(`========================================`);
-  console.log(`✅ Games are now from SQLite database!`);
-  console.log(`✅ Orders & Payment system ready!`);
-  console.log(`✅ Admin dashboard ready!`);
-  console.log(`✅ Password hashing with bcrypt enabled!`);
   console.log(`========================================`);
 });

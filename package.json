@@ -1,19 +1,21 @@
 {
   "name": "navigatr",
   "version": "1.0.0",
-  "description": "",
-  "main": "script.js",
+  "description": "Game Store E-Commerce System",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "bcrypt": "^6.0.0",
+    "bcrypt": "^5.1.1",
     "cors": "^2.8.6",
-    "express": "^5.2.1",
-    "sqlite3": "^6.0.1"
+    "express": "^4.22.1",
+    "pg": "^8.20.0"
+  },
+  "engines": {
+    "node": "18.x"
   }
 }
