@@ -19,19 +19,6 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// ================ SERVE XSL FILES ================
-app.get("/orders.xsl", (req, res) => {
-    res.sendFile(path.join(__dirname, "orders.xsl"));
-});
-
-app.get("/games.xsl", (req, res) => {
-    res.sendFile(path.join(__dirname, "games.xsl"));
-});
-
-app.get("/payments.xsl", (req, res) => {
-    res.sendFile(path.join(__dirname, "payments.xsl"));
-});
-
 // PostgreSQL connection
 const db = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -811,7 +798,7 @@ app.get("/api/admin/xml/payments", async (req, res) => {
             xml += `    <payment_status>${payment.payment_status}</payment_status>\n`;
             xml += `    <transaction_id>${payment.transaction_id || '-'}</transaction_id>\n`;
             xml += `    <payment_date>${payment.payment_date}</payment_date>\n`;
-            xml += '  </payment>\n';
+            xml += '  <\/payment>\n';
         }
         
         xml += '</payments>';
@@ -823,6 +810,16 @@ app.get("/api/admin/xml/payments", async (req, res) => {
     } catch (err) {
         console.error("XML Error:", err);
         res.status(500).json({ error: err.message });
+    }
+});
+
+// ================ DEBUG ================
+app.get("/api/debug/xml", async (req, res) => {
+    try {
+        const result = await db.query("SELECT id, name FROM games LIMIT 3");
+        res.json({ success: true, games: result.rows });
+    } catch (err) {
+        res.json({ success: false, error: err.message });
     }
 });
 
