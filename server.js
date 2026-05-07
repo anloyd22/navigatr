@@ -19,6 +19,19 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "index.html"));
 });
 
+// ================ SERVE XSL FILES ================
+app.get("/orders.xsl", (req, res) => {
+    res.sendFile(path.join(__dirname, "orders.xsl"));
+});
+
+app.get("/games.xsl", (req, res) => {
+    res.sendFile(path.join(__dirname, "games.xsl"));
+});
+
+app.get("/payments.xsl", (req, res) => {
+    res.sendFile(path.join(__dirname, "payments.xsl"));
+});
+
 // PostgreSQL connection
 const db = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -691,7 +704,7 @@ app.get("/api/admin/xml/orders", async (req, res) => {
         `);
         
         let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
-        xml += '<?xml-stylesheet type="text/xsl" href="https://navigatr-production.up.railway.app/orders.xsl"?>\n';
+        xml += '<?xml-stylesheet type="text/xsl" href="/orders.xsl"?>\n';
         xml += '<orders>\n';
         
         result.rows.forEach(order => {
@@ -731,7 +744,7 @@ app.get("/api/admin/xml/games", async (req, res) => {
         const result = await db.query("SELECT id, name, category, description, price, image_url, created_at FROM games ORDER BY name");
         
         let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
-        xml += '<?xml-stylesheet type="text/xsl" href="https://navigatr-production.up.railway.app/games.xsl"?>\n';
+        xml += '<?xml-stylesheet type="text/xsl" href="/games.xsl"?>\n';
         xml += '<games>\n';
         
         result.rows.forEach(game => {
@@ -784,7 +797,7 @@ app.get("/api/admin/xml/payments", async (req, res) => {
         `);
         
         let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
-        xml += '<?xml-stylesheet type="text/xsl" href="https://navigatr-production.up.railway.app/payments.xsl"?>\n';
+        xml += '<?xml-stylesheet type="text/xsl" href="/payments.xsl"?>\n';
         xml += '<payments>\n';
         
         result.rows.forEach(payment => {
